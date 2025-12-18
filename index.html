@@ -21,7 +21,7 @@
 
     /* SOL PANEL */
     .left-panel {
-      width: 340px; /* bilinçli dar */
+      width: 340px;
       background: #ffffff;
       border-right: 1px solid #ddd;
       padding: 12px;
@@ -33,32 +33,29 @@
 
     /* TEKLİF BİLGİLERİ */
     .info-text {
-      font-size: 12px; /* taşma olmasın */
+      font-size: 12px;
       color: #222;
       display: flex;
       flex-direction: column;
       gap: 6px;
     }
 
-    /* İKİLİ SATIR */
     .info-row {
       display: grid;
-      grid-template-columns: 1.25fr 0.85fr; /* sol biraz daha geniş */
-      column-gap: 26px; /* sağ tarafı sağa iter */
+      grid-template-columns: 1.25fr 0.85fr;
+      column-gap: 26px;
     }
 
-    /* TEK SATIR */
     .info-row.single {
       grid-template-columns: 1fr;
     }
 
-    /* ETİKET + DEĞER */
     .info-item {
       display: grid;
-      grid-template-columns: 70px 1fr; /* etiket sabit (daraltıp genişletebilirsin) */
+      grid-template-columns: 70px 1fr;
       column-gap: 6px;
       align-items: center;
-      min-width: 0; /* ellipsis çalışsın */
+      min-width: 0;
     }
 
     .info-item strong {
@@ -73,7 +70,6 @@
       min-width: 0;
     }
 
-    /* AYIRICI */
     .divider {
       height: 2px;
       background: #e53935;
@@ -81,7 +77,6 @@
       width: 100%;
     }
 
-    /* SİSTEM SATIRI */
     .form-row {
       display: grid;
       grid-template-columns: 60px 1fr;
@@ -98,12 +93,11 @@
     .form-row select {
       width: 100%;
       padding: 6px;
-      font-size: 12px; /* tablette daha okunur ama küçük */
+      font-size: 12px;
       border-radius: 4px;
       border: 1px solid #ccc;
     }
 
-    /* SAĞ PANEL */
     .right-panel {
       flex: 1;
       background: #e9edf2;
@@ -114,7 +108,6 @@
       font-size: 16px;
     }
 
-    /* TABLET / MOBİL */
     @media (max-width: 900px) {
       .app-container {
         flex-direction: column;
@@ -136,7 +129,6 @@
         row-gap: 4px;
       }
 
-      /* MOBİL / TABLET SELECT KÜÇÜLTME */
       select {
         font-size: 13px;
         line-height: 1.2;
@@ -154,10 +146,8 @@
 
 <div class="app-container">
 
-  <!-- SOL PANEL -->
   <div class="left-panel">
 
-    <!-- TEKLİF BİLGİLERİ -->
     <div class="info-text">
 
       <div class="info-row">
@@ -193,7 +183,6 @@
 
     <div class="divider"></div>
 
-    <!-- SİSTEM -->
     <div class="form-row">
       <label for="sistemSelect">Sistem</label>
       <select id="sistemSelect">
@@ -203,7 +192,6 @@
 
   </div>
 
-  <!-- SAĞ PANEL -->
   <div class="right-panel">
     Buraya çizim ekranı / başka index gelecek
   </div>
@@ -214,16 +202,24 @@
   const API_URL =
     "https://script.google.com/macros/s/AKfycbwYST6D2OwdF3xUNMG9gtQ2fMgaDwE7UMtCm7ocplUqu6fn7GZn_ymprGvnIBQIheDyjg/exec";
 
-  // URL'den teklifNo al
   function getQueryParam(name) {
     return new URLSearchParams(window.location.search).get(name);
   }
 
-  const teklifNo = getQueryParam("teklifNo");
+  const teklifNo = (getQueryParam("teklifNo") || "").trim();
 
-  /* =========================
-     TEKLİF BİLGİLERİNİ ÇEK
-  ========================= */
+  async function fetchJSON(url) {
+    const res = await fetch(url, { redirect: "follow" });
+    const text = await res.text();
+    console.log("API RAW RESPONSE:", text);
+
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      throw new Error("JSON parse edilemedi");
+    }
+  }
+
   async function loadTeklif() {
     if (!teklifNo) {
       console.warn("teklifNo yok");
@@ -231,35 +227,29 @@
     }
 
     try {
-      const res = await fetch(
+      const data = await fetchJSON(
         API_URL + "?action=teklif&teklifNo=" + encodeURIComponent(teklifNo)
       );
-      const data = await res.json();
 
       if (data.error) {
-        alert(data.error);
+        console.warn(data.error);
         return;
       }
 
       document.getElementById("teklifNo").textContent = data.teklifNo || "-";
+      document.getElementById("tarih").textContent = data.tarih || "-";
       document.getElementById("musteri").textContent = data.musteriAdi || "-";
       document.getElementById("telefon").textContent = data.telefon || "-";
       document.getElementById("montaj").textContent = data.montajYeri || "-";
-      document.getElementById("tarih").textContent = data.tarih || "-";
 
     } catch (err) {
-      console.error(err);
-      alert("Teklif bilgileri alınamadı");
+      console.error("Teklif yüklenemedi:", err);
     }
   }
 
-  /* =========================
-     SİSTEMLERİ ÇEK
-  ========================= */
   async function loadSistemler() {
     try {
-      const res = await fetch(API_URL + "?action=sistemler");
-      const list = await res.json();
+      const list = await fetchJSON(API_URL + "?action=sistemler");
 
       const select = document.getElementById("sistemSelect");
       select.innerHTML = '<option value="">Seçiniz</option>';
@@ -272,16 +262,13 @@
       });
 
     } catch (err) {
-      console.error(err);
-      alert("Sistem listesi alınamadı");
+      console.error("Sistemler alınamadı:", err);
     }
   }
 
-  // Çalıştır
   loadTeklif();
   loadSistemler();
 </script>
-
 
 </body>
 </html>
