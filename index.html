@@ -5,146 +5,149 @@
   <title>Çizim Ekranı</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<style>
-  body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #f2f4f7;
-  }
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f2f4f7;
+    }
 
-  /* ANA YAPI */
-  .app-container {
-    display: flex;
-    height: 100vh;
-    width: 100vw;
-  }
-
-  /* SOL PANEL */
-  .left-panel {
-    width: 340px; /* bilinçli dar */
-    background: #ffffff;
-    border-right: 1px solid #ddd;
-    padding: 12px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  /* TEKLİF BİLGİLERİ */
-  .info-text {
-    font-size: 12px; /* taşma olmasın */
-    color: #222;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  /* İKİLİ SATIR */
-  .info-row {
-    display: grid;
-    grid-template-columns: 1.2fr 0.9fr;
-    column-gap: 25px;
-  }
-
-  /* TEK SATIR */
-  .info-row.single {
-    grid-template-columns: 1fr;
-  }
-
-  /* ETİKET + DEĞER */
-  .info-item {
-    display: grid;
-    grid-template-columns: 50px 1fr; /* etiket sabit */
-    column-gap: 6px;
-    align-items: center;
-  }
-
-  .info-item strong {
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  .info-item span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* AYIRICI */
-  .divider {
-    height: 2px;
-    background: #e53935;
-    margin: 6px 0;
-    width: 100%;
-  }
-
-  /* SİSTEM SATIRI */
-  .form-row {
-    display: grid;
-    grid-template-columns: 60px 1fr;
-    align-items: center;
-    column-gap: 8px;
-  }
-
-  .form-row label {
-    font-size: 12.5px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  .form-row select {
-    width: 100%;
-    padding: 6px;
-    font-size: 10px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-  }
-
-  /* SAĞ PANEL */
-  .right-panel {
-    flex: 1;
-    background: #e9edf2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #777;
-    font-size: 16px;
-  }
-
-  /* TABLET / MOBİL */
-  @media (max-width: 900px) {
+    /* ANA YAPI */
     .app-container {
-      flex-direction: column;
+      display: flex;
+      height: 100vh;
+      width: 100vw;
     }
 
+    /* SOL PANEL */
     .left-panel {
-      width: 100%;
-      border-right: none;
-      border-bottom: 1px solid #ddd;
+      width: 340px; /* bilinçli dar */
+      background: #ffffff;
+      border-right: 1px solid #ddd;
+      padding: 12px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
 
+    /* TEKLİF BİLGİLERİ */
+    .info-text {
+      font-size: 12px; /* taşma olmasın */
+      color: #222;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* İKİLİ SATIR */
     .info-row {
-      grid-template-columns: 1fr;
-      row-gap: 4px;
+      display: grid;
+      grid-template-columns: 1.25fr 0.85fr; /* sol biraz daha geniş */
+      column-gap: 26px; /* sağ tarafı sağa iter */
     }
 
+    /* TEK SATIR */
+    .info-row.single {
+      grid-template-columns: 1fr;
+    }
+
+    /* ETİKET + DEĞER */
+    .info-item {
+      display: grid;
+      grid-template-columns: 70px 1fr; /* etiket sabit (daraltıp genişletebilirsin) */
+      column-gap: 6px;
+      align-items: center;
+      min-width: 0; /* ellipsis çalışsın */
+    }
+
+    .info-item strong {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .info-item span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    /* AYIRICI */
+    .divider {
+      height: 2px;
+      background: #e53935;
+      margin: 6px 0;
+      width: 100%;
+    }
+
+    /* SİSTEM SATIRI */
     .form-row {
-      grid-template-columns: 1fr;
-      row-gap: 4px;
+      display: grid;
+      grid-template-columns: 60px 1fr;
+      align-items: center;
+      column-gap: 8px;
     }
-/* MOBİL / TABLET SELECT KÜÇÜLTME */
-select {
-  font-size: 13px;
-  line-height: 1.2;
-}
 
-select option {
-  font-size: 13px;
-  padding: 6px 8px;
-}
-  }
-</style>
+    .form-row label {
+      font-size: 12.5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .form-row select {
+      width: 100%;
+      padding: 6px;
+      font-size: 12px; /* tablette daha okunur ama küçük */
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+
+    /* SAĞ PANEL */
+    .right-panel {
+      flex: 1;
+      background: #e9edf2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #777;
+      font-size: 16px;
+    }
+
+    /* TABLET / MOBİL */
+    @media (max-width: 900px) {
+      .app-container {
+        flex-direction: column;
+      }
+
+      .left-panel {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .info-row {
+        grid-template-columns: 1fr;
+        row-gap: 4px;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+        row-gap: 4px;
+      }
+
+      /* MOBİL / TABLET SELECT KÜÇÜLTME */
+      select {
+        font-size: 13px;
+        line-height: 1.2;
+      }
+
+      select option {
+        font-size: 13px;
+        padding: 6px 8px;
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -160,29 +163,29 @@ select option {
       <div class="info-row">
         <div class="info-item">
           <strong>Teklif No</strong>
-          <span id="teklifNo">MRV-18122025-001</span>
+          <span id="teklifNo">-</span>
         </div>
         <div class="info-item">
           <strong>Tarih</strong>
-          <span id="tarih">18.12.2025</span>
+          <span id="tarih">-</span>
         </div>
       </div>
 
       <div class="info-row">
         <div class="info-item">
           <strong>Telefon</strong>
-          <span id="telefon">0554 112 32 06</span>
+          <span id="telefon">-</span>
         </div>
         <div class="info-item">
           <strong>Montaj</strong>
-          <span id="montaj">EFELER</span>
+          <span id="montaj">-</span>
         </div>
       </div>
 
       <div class="info-row single">
         <div class="info-item">
           <strong>Müşteri</strong>
-          <span id="musteri">Özcan Kirsiz</span>
+          <span id="musteri">-</span>
         </div>
       </div>
 
@@ -211,24 +214,74 @@ select option {
   const API_URL =
     "https://script.google.com/macros/s/AKfycbwYST6D2OwdF3xUNMG9gtQ2fMgaDwE7UMtCm7ocplUqu6fn7GZn_ymprGvnIBQIheDyjg/exec";
 
-  fetch(API_URL)
-    .then(res => res.json())
-    .then(data => {
+  // URL'den teklifNo al
+  function getQueryParam(name) {
+    return new URLSearchParams(window.location.search).get(name);
+  }
+
+  const teklifNo = getQueryParam("teklifNo");
+
+  /* =========================
+     TEKLİF BİLGİLERİNİ ÇEK
+  ========================= */
+  async function loadTeklif() {
+    if (!teklifNo) {
+      console.warn("teklifNo yok");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        API_URL + "?action=teklif&teklifNo=" + encodeURIComponent(teklifNo)
+      );
+      const data = await res.json();
+
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+
+      document.getElementById("teklifNo").textContent = data.teklifNo || "-";
+      document.getElementById("musteri").textContent = data.musteriAdi || "-";
+      document.getElementById("telefon").textContent = data.telefon || "-";
+      document.getElementById("montaj").textContent = data.montajYeri || "-";
+      document.getElementById("tarih").textContent = data.tarih || "-";
+
+    } catch (err) {
+      console.error(err);
+      alert("Teklif bilgileri alınamadı");
+    }
+  }
+
+  /* =========================
+     SİSTEMLERİ ÇEK
+  ========================= */
+  async function loadSistemler() {
+    try {
+      const res = await fetch(API_URL + "?action=sistemler");
+      const list = await res.json();
+
       const select = document.getElementById("sistemSelect");
       select.innerHTML = '<option value="">Seçiniz</option>';
 
-      data.forEach(item => {
+      list.forEach(item => {
         const opt = document.createElement("option");
         opt.value = item;
         opt.textContent = item;
         select.appendChild(opt);
       });
-    })
-    .catch(err => {
-      alert("Sistem listesi alınamadı");
+
+    } catch (err) {
       console.error(err);
-    });
+      alert("Sistem listesi alınamadı");
+    }
+  }
+
+  // Çalıştır
+  loadTeklif();
+  loadSistemler();
 </script>
+
 
 </body>
 </html>
