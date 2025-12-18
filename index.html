@@ -224,7 +224,7 @@
   const teklifNo = (getQueryParam("teklifNo") || "").trim();
 
   async function fetchJSON(url) {
-    const res = await fetch(url, { redirect: "follow" });
+    const res = await fetch(url);
     const text = await res.text();
     return JSON.parse(text);
   }
@@ -232,31 +232,40 @@
   async function loadTeklif() {
     if (!teklifNo) return;
 
-    const data = await fetchJSON(
-      API_URL + "?action=teklif&teklifNo=" + encodeURIComponent(teklifNo)
-    );
+    try {
+      const data = await fetchJSON(
+        API_URL + "?action=teklif&teklifNo=" + encodeURIComponent(teklifNo)
+      );
 
-    if (data.error) return;
+      if (data.error) return;
 
-    teklifNoEl.textContent = data.teklifNo || "-";
-    tarih.textContent = data.tarih || "-";
-    musteri.textContent = data.musteriAdi || "-";
-    telefon.textContent = data.telefon || "-";
-    montaj.textContent = data.montajYeri || "-";
+      document.getElementById("teklifNo").textContent = data.teklifNo || "-";
+      document.getElementById("tarih").textContent = data.tarih || "-";
+      document.getElementById("musteri").textContent = data.musteriAdi || "-";
+      document.getElementById("telefon").textContent = data.telefon || "-";
+      document.getElementById("montaj").textContent = data.montajYeri || "-";
+
+    } catch (e) {
+      console.error("Teklif yüklenemedi:", e);
+    }
   }
 
   async function loadSelect(action, selectId) {
-    const list = await fetchJSON(API_URL + "?action=" + action);
-    const select = document.getElementById(selectId);
+    try {
+      const list = await fetchJSON(API_URL + "?action=" + action);
+      const select = document.getElementById(selectId);
 
-    select.innerHTML = '<option value="">Seçiniz</option>';
+      select.innerHTML = '<option value="">Seçiniz</option>';
 
-    list.forEach(item => {
-      const opt = document.createElement("option");
-      opt.value = item;
-      opt.textContent = item;
-      select.appendChild(opt);
-    });
+      list.forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item;
+        opt.textContent = item;
+        select.appendChild(opt);
+      });
+    } catch (e) {
+      console.error(action + " yüklenemedi:", e);
+    }
   }
 
   loadTeklif();
@@ -268,5 +277,6 @@
 
 </body>
 </html>
+
 
 
