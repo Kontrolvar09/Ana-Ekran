@@ -232,6 +232,12 @@
   async function loadTeklif() {
     if (!teklifNo) return;
 
+    const teklifNoEl = document.getElementById("teklifNo");
+    const tarihEl    = document.getElementById("tarih");
+    const musteriEl  = document.getElementById("musteri");
+    const telefonEl  = document.getElementById("telefon");
+    const montajEl   = document.getElementById("montaj");
+
     try {
       const data = await fetchJSON(
         API_URL + "?action=teklif&teklifNo=" + encodeURIComponent(teklifNo)
@@ -239,11 +245,11 @@
 
       if (data.error) return;
 
-      document.getElementById("teklifNo").textContent = data.teklifNo || "-";
-      document.getElementById("tarih").textContent = data.tarih || "-";
-      document.getElementById("musteri").textContent = data.musteriAdi || "-";
-      document.getElementById("telefon").textContent = data.telefon || "-";
-      document.getElementById("montaj").textContent = data.montajYeri || "-";
+      teklifNoEl.textContent = data.teklifNo || "-";
+      tarihEl.textContent    = data.tarih || "-";
+      musteriEl.textContent  = data.musteriAdi || "-";
+      telefonEl.textContent  = data.telefon || "-";
+      montajEl.textContent   = data.montajYeri || "-";
 
     } catch (e) {
       console.error("Teklif yüklenemedi:", e);
@@ -268,15 +274,20 @@
     }
   }
 
-  loadTeklif();
-  loadSelect("sistemler", "sistemSelect");
-  loadSelect("aluminyum", "aluminyumSelect");
-  loadSelect("cam", "camSelect");
-  loadSelect("extra", "extraSelect");
+  // 🔴 EN KRİTİK KISIM
+  document.addEventListener("DOMContentLoaded", () => {
+    loadTeklif();
+    loadSelect("sistemler", "sistemSelect");
+    loadSelect("aluminyum", "aluminyumSelect");
+    loadSelect("cam", "camSelect");
+    loadSelect("extra", "extraSelect");
+  });
 </script>
+
 
 </body>
 </html>
+
 
 
 
