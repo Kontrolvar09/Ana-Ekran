@@ -79,7 +79,7 @@
 
     .form-row {
       display: grid;
-      grid-template-columns: 60px 1fr;
+      grid-template-columns: 90px 1fr;
       align-items: center;
       column-gap: 8px;
     }
@@ -128,16 +128,6 @@
         grid-template-columns: 1fr;
         row-gap: 4px;
       }
-
-      select {
-        font-size: 13px;
-        line-height: 1.2;
-      }
-
-      select option {
-        font-size: 13px;
-        padding: 6px 8px;
-      }
     }
   </style>
 </head>
@@ -146,8 +136,10 @@
 
 <div class="app-container">
 
+  <!-- SOL PANEL -->
   <div class="left-panel">
 
+    <!-- TEKLİF BİLGİLERİ -->
     <div class="info-text">
 
       <div class="info-row">
@@ -183,15 +175,38 @@
 
     <div class="divider"></div>
 
+    <!-- SEÇİMLER -->
     <div class="form-row">
-      <label for="sistemSelect">Sistem</label>
+      <label>Sistem</label>
       <select id="sistemSelect">
+        <option>Yükleniyor...</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <label>Alüminyum</label>
+      <select id="aluminyumSelect">
+        <option>Yükleniyor...</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <label>Cam</label>
+      <select id="camSelect">
+        <option>Yükleniyor...</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <label>Ekstra</label>
+      <select id="extraSelect">
         <option>Yükleniyor...</option>
       </select>
     </div>
 
   </div>
 
+  <!-- SAĞ PANEL -->
   <div class="right-panel">
     Buraya çizim ekranı / başka index gelecek
   </div>
@@ -211,66 +226,45 @@
   async function fetchJSON(url) {
     const res = await fetch(url, { redirect: "follow" });
     const text = await res.text();
-    console.log("API RAW RESPONSE:", text);
-
-    try {
-      return JSON.parse(text);
-    } catch (e) {
-      throw new Error("JSON parse edilemedi");
-    }
+    return JSON.parse(text);
   }
 
   async function loadTeklif() {
-    if (!teklifNo) {
-      console.warn("teklifNo yok");
-      return;
-    }
+    if (!teklifNo) return;
 
-    try {
-      const data = await fetchJSON(
-        API_URL + "?action=teklif&teklifNo=" + encodeURIComponent(teklifNo)
-      );
+    const data = await fetchJSON(
+      API_URL + "?action=teklif&teklifNo=" + encodeURIComponent(teklifNo)
+    );
 
-      if (data.error) {
-        console.warn(data.error);
-        return;
-      }
+    if (data.error) return;
 
-      document.getElementById("teklifNo").textContent = data.teklifNo || "-";
-      document.getElementById("tarih").textContent = data.tarih || "-";
-      document.getElementById("musteri").textContent = data.musteriAdi || "-";
-      document.getElementById("telefon").textContent = data.telefon || "-";
-      document.getElementById("montaj").textContent = data.montajYeri || "-";
-
-    } catch (err) {
-      console.error("Teklif yüklenemedi:", err);
-    }
+    teklifNoEl.textContent = data.teklifNo || "-";
+    tarih.textContent = data.tarih || "-";
+    musteri.textContent = data.musteriAdi || "-";
+    telefon.textContent = data.telefon || "-";
+    montaj.textContent = data.montajYeri || "-";
   }
 
-  async function loadSistemler() {
-    try {
-      const list = await fetchJSON(API_URL + "?action=sistemler");
+  async function loadSelect(action, selectId) {
+    const list = await fetchJSON(API_URL + "?action=" + action);
+    const select = document.getElementById(selectId);
 
-      const select = document.getElementById("sistemSelect");
-      select.innerHTML = '<option value="">Seçiniz</option>';
+    select.innerHTML = '<option value="">Seçiniz</option>';
 
-      list.forEach(item => {
-        const opt = document.createElement("option");
-        opt.value = item;
-        opt.textContent = item;
-        select.appendChild(opt);
-      });
-
-    } catch (err) {
-      console.error("Sistemler alınamadı:", err);
-    }
+    list.forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item;
+      opt.textContent = item;
+      select.appendChild(opt);
+    });
   }
 
   loadTeklif();
-  loadSistemler();
+  loadSelect("sistemler", "sistemSelect");
+  loadSelect("aluminyum", "aluminyumSelect");
+  loadSelect("cam", "camSelect");
+  loadSelect("extra", "extraSelect");
 </script>
 
 </body>
 </html>
-
-
