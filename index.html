@@ -422,56 +422,67 @@ loadSelect("cam", "camSelect");
 </script>
 
 <script>
-/* ✅ Balkon tipi seçimi + çizim ekranı açma */
+/* ✅ Balkon tipi seçimi + çizim ekranı açma + UYARI */
 const balkonCards = document.querySelectorAll(".balkon-card");
 const balkonTipiInput = document.getElementById("balkon_tipi");
-const drawingFrame = document.getElementById("drawingFrame");
 
 balkonCards.forEach(card => {
   card.addEventListener("click", () => {
+
+    const newType = card.dataset.type;
+    const oldType = balkonTipiInput.value;
+
+    // ⚠️ Daha önce çizim varsa uyar
+    if (oldType && oldType !== newType) {
+      const ok = confirm("Mevcut çizim iptal edilecek. Devam etmek istiyor musunuz?");
+      if (!ok) return;
+    }
 
     // aktif görünüm
     balkonCards.forEach(c => c.classList.remove("active"));
     card.classList.add("active");
 
-    const type = card.dataset.type;
-    balkonTipiInput.value = type;
+    balkonTipiInput.value = newType;
 
-    // 👉 ÇİZİM EKRANI YÜKLEME
-    if (type === "duz") {
+    // 👉 ÇİZİM EKRANI YÜKLE
+    if (newType === "duz") {
       drawingFrame.src = "duz.index.html";
-    } else if (type === "u") {
+    } else if (newType === "u") {
       drawingFrame.src = "u.index.html";
-    } else if (type === "l") {
+    } else if (newType === "l") {
       drawingFrame.src = "l.index.html";
-    } else if (type === "l2") {
+    } else if (newType === "l2") {
       drawingFrame.src = "l2.index.html";
     }
 
+    // ✅ ÇİZİM AÇILINCA SOL PANEL GİZLENSİN
+    leftPanel.classList.add("hidden");
+    updateToggle();
   });
 });
 </script>
+
 
 <script>
-/* ✅ ÇİZİM EKRANINA DÖNÜNCE SOL PANELİ OTOMATİK GİZLE */
+/* ✅ ÇİZİM EKRANINDA ÇALIŞMAYA BAŞLAYINCA PANELİ GİZLE */
 
-const drawingFrame = document.getElementById("drawingFrame");
-
-// iframe tıklanınca
 drawingFrame.addEventListener("load", () => {
-
-  // iframe içi tıklamaları yakalamak için
-  drawingFrame.contentWindow.addEventListener("click", () => {
-    if (!leftPanel.classList.contains("hidden")) {
-      leftPanel.classList.add("hidden");
-      updateToggle();
-    }
-  });
-
+  try {
+    drawingFrame.contentWindow.addEventListener("mousedown", () => {
+      if (!leftPanel.classList.contains("hidden")) {
+        leftPanel.classList.add("hidden");
+        updateToggle();
+      }
+    });
+  } catch (e) {
+    console.warn("iframe click yakalanamadı", e);
+  }
 });
 </script>
+  
 
 </body>
 </html>
+
 
 
