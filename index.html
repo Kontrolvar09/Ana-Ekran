@@ -448,16 +448,30 @@ balkonCards.forEach(card => {
       drawingFrame.src = "l2.index.html";
     }
 
-    // ✅ SOL PANELİ GİZLE (EKSİK OLAN KISIM)
-    leftPanel.classList.add("hidden");
-    updateToggle();
-
   });
 });
 </script>
 
+<script>
+/* ✅ ÇİZİM EKRANINA DÖNÜNCE SOL PANELİ OTOMATİK GİZLE */
 
+const drawingFrame = document.getElementById("drawingFrame");
+
+// iframe tıklanınca
+drawingFrame.addEventListener("load", () => {
+
+  // iframe içi tıklamaları yakalamak için
+  drawingFrame.contentWindow.addEventListener("click", () => {
+    if (!leftPanel.classList.contains("hidden")) {
+      leftPanel.classList.add("hidden");
+      updateToggle();
+    }
+  });
+
+});
+</script>
 
 </body>
 </html>
+
 
