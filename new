@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Çizim Ekranı</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f2f4f7;
+    }
+
+    /* ANA YAPI */
+    .app-container {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* SOL PANEL */
+    .left-panel {
+      width: 340px;
+      background: #ffffff;
+      border-right: 1px solid #ddd;
+      padding: 12px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* TEKLİF BİLGİLERİ */
+    .info-text {
+      font-size: 12px;
+      color: #222;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .info-row {
+      display: grid;
+      grid-template-columns: 1.25fr 0.85fr;
+      column-gap: 26px;
+    }
+
+    .info-row.single {
+      grid-template-columns: 1fr;
+    }
+
+    .info-item {
+      display: grid;
+      grid-template-columns: 70px 1fr;
+      column-gap: 6px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .info-item strong {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .info-item span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .divider {
+      height: 2px;
+      background: #e53935;
+      margin: 6px 0;
+      width: 100%;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 90px 1fr;
+      align-items: center;
+      column-gap: 8px;
+    }
+
+    .form-row label {
+      font-size: 12.5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .form-row select {
+      width: 100%;
+      padding: 6px;
+      font-size: 12px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+
+    .right-panel {
+      flex: 1;
+      background: #e9edf2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #777;
+      font-size: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .app-container {
+        flex-direction: column;
+      }
+
+      .left-panel {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .info-row {
+        grid-template-columns: 1fr;
+        row-gap: 4px;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+        row-gap: 4px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="app-container">
+
+  <!-- SOL PANEL -->
+  <div class="left-panel">
+
+    <!-- TEKLİF BİLGİLERİ -->
+    <div class="info-text">
+
+      <div class="info-row">
+        <div class="info-item">
+          <strong>Teklif No</strong>
+          <span id="teklifNo">-</span>
+        </div>
+        <div class="info-item">
+          <strong>Tarih</strong>
+          <span id="tarih">-</span>
+        </div>
+      </div>
+
+      <div class="info-row">
+        <div class="info-item">
+          <strong>Telefon</strong>
+          <span id="telefon">-</span>
+        </div>
+        <div class="info-item">
+          <strong>Montaj</strong>
+          <span id="montaj">-</span>
+        </div>
+      </div>
+
+      <div class="info-row single">
+        <div class="info-item">
+          <strong>Müşteri</strong>
+          <span id="musteri">-</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- SEÇİMLER -->
+    <div class="form-row">
+      <label>Sistem</label>
+      <select id="sistemSelect">
+        <option>Yükleniyor...</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <label>Alüminyum</label>
+      <select id="aluminyumSelect">
+        <option>Yükleniyor...</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <label>Cam</label>
+      <select id="camSelect">
+        <option>Yükleniyor...</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <label>Ekstra</label>
+      <select id="extraSelect">
+        <option>Yükleniyor...</option>
+      </select>
+    </div>
+
+  </div>
+
+  <!-- SAĞ PANEL -->
+  <div class="right-panel">
+    Buraya çizim ekranı / başka index gelecek
+  </div>
+
+</div>
+
+<script>
+  const API_URL =
+    "https://script.google.com/macros/s/AKfycbxTcYJqSyQT9KRtiLRaY3JGlcBG8tmxMkmni5r17HprE8qAY0Bf8CtBUCc2ICDOBWyb5A/exec";
+
+  function getQueryParam(name) {
+    return new URLSearchParams(window.location.search).get(name);
+  }
+
+  const teklifNo = (getQueryParam("teklifNo") || "").trim();
+
+  async function fetchJSON(url) {
+    const res = await fetch(url);
+    const text = await res.text();
+    return JSON.parse(text);
+  }
+
+  async function loadTeklif() {
+    if (!teklifNo) return;
+
+    try {
+      const data = await fetchJSON(
+        API_URL + "?action=teklif&teklifNo=" + encodeURIComponent(teklifNo)
+      );
+
+      if (data.error) return;
+
+      document.getElementById("teklifNo").textContent = data.teklifNo || "-";
+      document.getElementById("tarih").textContent = data.tarih || "-";
+      document.getElementById("musteri").textContent = data.musteriAdi || "-";
+      document.getElementById("telefon").textContent = data.telefon || "-";
+      document.getElementById("montaj").textContent = data.montajYeri || "-";
+
+    } catch (e) {
+      console.error("Teklif yüklenemedi:", e);
+    }
+  }
+
+  async function loadSelect(action, selectId) {
+    try {
+      const list = await fetchJSON(API_URL + "?action=" + action);
+      const select = document.getElementById(selectId);
+
+      select.innerHTML = '<option value="">Seçiniz</option>';
+
+      list.forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item;
+        opt.textContent = item;
+        select.appendChild(opt);
+      });
+    } catch (e) {
+      console.error(action + " yüklenemedi:", e);
+    }
+  }
+
+  loadTeklif();
+  loadSelect("sistemler", "sistemSelect");
+  loadSelect("aluminyum", "aluminyumSelect");
+  loadSelect("cam", "camSelect");
+  loadSelect("extra", "extraSelect");
+</script>
+
+</body>
+</html>
+
+
