@@ -180,27 +180,35 @@
 <script>
 /* PANEL AÇ / KAPA */
 const leftPanel = document.getElementById("leftPanel");
+const rightPanel = document.getElementById("rightPanel");
 const toggleBtn = document.getElementById("toggleBtn");
-const appContainer = document.getElementById("appContainer");
 
 function updateToggle() {
   toggleBtn.style.display = leftPanel.classList.contains("hidden") ? "block" : "none";
 }
 
-toggleBtn.onclick = (e) => {
+// Sol panel içi tıklamalar kapanmayı tetiklemesin
+leftPanel.addEventListener("click", (e) => {
+  e.stopPropagation();
+});
+
+// Toggle ile aç
+toggleBtn.addEventListener("click", (e) => {
   e.stopPropagation();
   leftPanel.classList.remove("hidden");
   updateToggle();
-};
+});
 
-appContainer.onclick = () => {
+// SADECE sağ panele tıklanınca kapa
+rightPanel.addEventListener("click", () => {
   if (!leftPanel.classList.contains("hidden")) {
     leftPanel.classList.add("hidden");
     updateToggle();
   }
-};
+});
 
 updateToggle();
+
 </script>
 
 <script>
@@ -261,4 +269,5 @@ loadSelect("extra", "extraSelect");
 
 </body>
 </html>
+
 
