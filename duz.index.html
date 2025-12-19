@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Merve Cam Balkon – Düz Balkon</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://unpkg.com/konva@9.3.0/konva.min.js"></script>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #f0f0f0;
+      font-family: Arial, sans-serif;
+    }
+
+    #sidebar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 180px;
+      height: 100%;
+      background: #f4f4f4;
+      border-right: 1px solid #ccc;
+      padding: 12px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 500;
+    }
+
+    .btn {
+      padding: 8px 10px;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .btn.dark { background:#333; color:#fff; }
+    .btn.gray { background:#555; color:#fff; }
+    .btn.green { background:#2ecc71; color:#fff; }
+
+    #konva-container {
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      cursor: crosshair;
+      position: relative;
+    }
+
+    input.inline-editor {
+      position: absolute;
+      border: 1px solid #000;
+      font-size: 14px;
+      width: 70px;
+      text-align: center;
+      outline: none;
+      z-index: 1000;
+      background: #fff;
+    }
+  </style>
+</head>
+
+<body>
+
+
+<!-- ÇİZİM -->
+<div id="konva-container"></div>
+
+<script>
+/* ================= GLOBAL STATE ================= */
+let mmToPx = 0.2;
+let heightText = null;
+let mainStartPoint = null;
+let isRestoringState = false
+
+
+let drawMode = false;
+let drawing = false;
+let editing = false;
+
+let startPoint = null;
+let tempLine = null;
+let longPressTimer = null;
+
+let currentLengthMM = 2000;
+let currentHeightMM = 1900;
+let currentProfile = null;
+
+let panels = [];
+let profiles = {};
+let panelControlGroup = null;
+
+
+/* ================= UNDO / REDO ================= */
+const undoStack = [];
+const redoStack = [];
+const MAX_HISTORY = 50;
+
+/* ================= STAGE ================= */
+const container = document.getElementById("konva-container");
+
+const stage = new Konva.Stage({
+  container: "konva-container",
+  width: window.innerWidth,
+  height: window.innerHeight
+});
+
+const gridLayer = new Konva.Layer();
+const layer = new Konva.Layer();       // çizim
+const panelLayer = new Konva.Layer();  // paneller
+const uiLayer = new Konva.Layer();     // 👈 SAĞ ALT PANEL
+
+
+stage.add(gridLayer);
+stage.add(layer);
+stage.add(panelLayer);
+stage.add(uiLayer); // 👈 EN ÜSTE
+
+
+/* ================= WORLD COORD ================= */
+worldOrigin = {
+  x: stage.width() / 2,
+  y: stage.height() / 2
+};
+
+function worldToScreen(p) {
+  return {
+    x: worldOrigin.x + p.x * mmToPx,
+    y: worldOrigin.y + p.y * mmToPx
+  };
+}
+
+
+//function worldToScreen(p) {
+  //return {
+    //x: worldOrigin.x + p.x * mmToPx,
+    //y: worldOrigin.y + p.y * mmToPx
+  //};
+//}
+
+/* ================= GRID ================= */
+function drawGrid() {
+  gridLayer.destroyChildren();
+
+  const scale = stage.scaleX();
+  const offsetX = -stage.x() / scale;
+  const offsetY = -stage.y() / scale;
+
+  const viewWidth = stage.width() / scale;
+  const viewHeight = stage.height() / scale;
+
+  const gridMM = 500;
+  const smallMM = 100;
+
+  const gridPx = gridMM * mmToPx;
+  const smallPx = smallMM * mmToPx;
+
+  for (
+    let x = Math.floor(offsetX / smallPx) * smallPx;
+    x < offsetX + viewWidth;
+    x += smallPx
+  ) {
+    gridLayer.add(new Konva.Line({
+      points: [x, offsetY, x, offsetY + viewHeight],
+      stroke: Math.abs(x % gridPx) < 1 ? "#ccc" : "#eee",
+      strokeWidth: Math.abs(x % gridPx) < 1 ? 1.5 : 0.5,
+      listening: false
+    }));
+  }
+
+  for (
+    let y = Math.floor(offsetY / smallPx) * smallPx;
+    y < offsetY + viewHeight;
+    y += smallPx
+  ) {
+    gridLayer.add(new Konva.Line({
+      points: [offsetX, y, offsetX + viewWidth, y],
+      stroke: Math.abs(y % gridPx) < 1 ? "#ccc" : "#eee",
+      strokeWidth: Math.abs(y % gridPx) < 1 ? 1.5 : 0.5,
+      listening: false
+    }));
+  }
+
+  gridLayer.batchDraw();
+}
+
+
+/* ================= DÜZ BALKON INIT ================= */
+function initDuzBalkon() {
+  layer.destroyChildren();
+  panelLayer.destroyChildren();
+  panels = [];
+  profiles = {};
+
+  const screenStart = {
+    x: stage.width() / 2 - (currentLengthMM * mmToPx) / 2,
+    y: stage.height() / 2
+  };
+
+  mainStartPoint = screenStart;
+
+  currentProfile = drawProfileFixed(
+    screenStart,
+    currentLengthMM,
+    0,
+    "En",
+    "yatay"
+  );
+
+  drawPanelsYatay(screenStart, currentLengthMM, "right", 4);
+  drawHeightText(currentHeightMM);
+  drawPanelCountControl(4);
+
+  centerDrawingToScreen();
+  keepUIFixed();
+}
+
+
+/* ================= PROFİL ================= */
+function drawProfileFixed(start, lengthMM, angleDeg = 0, label = "En", type = "yatay") {
+
+  const widthPx = lengthMM * mmToPx;
+
+  const altH   = 70.16 * mmToPx;
+  const bazaH  = 10 * mmToPx;
+  const kanatH = 30.59 * mmToPx;
+
+  // ================== GRUP ==================
+  const group = new Konva.Group({
+    x: start.x,
+    y: start.y
+  });
+
+  layer.add(group);
+
+  // 🔴 meta bilgileri (panel & edit referansları için ŞART)
+  group.meta = {
+    type: type,
+    altKasa: null,
+    measureText: null
+  };
+
+  // ================== YATAY PROFİL ==================
+  if (angleDeg === 0) {
+
+    const altKasa = new Konva.Rect({
+  x: 0,
+  y: -altH,
+  width: widthPx,
+  height: altH,
+  fill: "#444",
+  stroke: "#000",
+  strokeWidth: 1,
+  name: "altKasa",
+  listening: true
+});
+
+
+const baza = new Konva.Rect({
+  x: 0,
+  y: -altH - bazaH,
+  width: widthPx,
+  height: bazaH,
+  fill: "#888",
+  stroke: "#000",
+  strokeWidth: 1
+});
+
+
+    const kanat = new Konva.Rect({
+      x: 5,
+      y: -altH - bazaH - kanatH,
+      width: widthPx - 10,
+      height: kanatH,
+      fill: "#ccc",
+      stroke: "#000",
+      strokeWidth: 1
+    });
+
+    const measureText = new Konva.Text({
+      x: widthPx / 2 - 40,
+      y: -altH - 100,
+      text: `${label}: ${Math.round(lengthMM)} mm`,
+      fontSize: 14,
+      fill: "black",
+      fontStyle: "bold"
+    });
+
+    // ⬇️ GRUBA EKLE
+    group.add(altKasa, baza, kanat, measureText);
+
+    // ⬇️ PANEL ve HEIGHT referansları
+    group.meta.altKasa     = altKasa;
+    group.meta.measureText = measureText;
+
+    // ⬇️ EN düzenleme AKTİF
+    makeEditable(measureText);
+  }
+
+  // ================== DİKEY PROFİL ==================
+  else {
+
+    const altKasa = new Konva.Rect({
+      x: 0,
+      y: 0,
+      width: altH,
+      height: widthPx,
+      fill: "#444",
+      stroke: "#000",
+      strokeWidth: 1
+    });
+
+const baza = new Konva.Rect({
+  x: 0,
+  y: -altH - bazaH,
+  width: widthPx,
+  height: bazaH,
+  fill: "#888",
+  stroke: "#000",
+  strokeWidth: 1
+});
+
+
+    const kanat = new Konva.Rect({
+      x: altH + bazaH,
+      y: 5,
+      width: kanatH,
+      height: widthPx - 10,
+      fill: "#ccc",
+      stroke: "#000",
+      strokeWidth: 1
+    });
+
+    const textX = type === "sol" ? -50 : altH + bazaH + 40;
+    const textY = widthPx / 2 - 20;
+
+    const measureText = new Konva.Text({
+      x: textX,
+      y: textY,
+      text: `${label}: ${Math.round(lengthMM)} mm`,
+      fontSize: 14,
+      fill: "black",
+      fontStyle: "bold",
+      rotation: -90
+    });
+
+    group.add(altKasa, baza, kanat, measureText);
+
+    group.meta.altKasa = altKasa;
+
+    // ⬇️ DİKEY ölçü düzenleme AKTİF
+    makeEditable(measureText);
+  }
+
+  layer.batchDraw();
+
+  return { group };
+}
+
+
+function getDefaultArrowDirection(panelIndex, panelCount) {
+  // 9 ve altı → hepsi sağa
+  if (panelCount <= 9) return "right";
+
+  // 10 ve üzeri → yarısı sol, yarısı sağ
+  const half = Math.floor(panelCount / 2);
+  return panelIndex < half ? "left" : "right";
+}
+
+
+/* ================= PANELLER ================= */
+function drawPanelsYatay(start, totalMM, direction, count = 4) {
+
+  panelLayer.destroyChildren();
+  panels = [];
+
+  const segmentMM = totalMM / count;
+  const segmentPx = segmentMM * mmToPx;
+
+  const baseX = start.x;
+  const baseY = start.y;
+  const altKasaH = 70.16 * mmToPx;
+
+  const panelNumOffset = 30;
+  const panelLineHeight = 8;
+  const panelLineGap = 6;
+  const arrowOffset = 10;
+  const measureOffset = 50;
+
+  for (let i = 0; i < count; i++) {
+    const x = baseX + i * segmentPx;
+
+    // 🔹 PANEL GROUP
+    const panelGroup = new Konva.Group({
+      x: x,
+      y: baseY,
+      listening: true
+    });
+
+    panelGroup.meta = {
+      index: i,
+      widthPx: segmentPx
+    };
+
+    // ✅ TIK / TAP → PANEL MENÜ
+    panelGroup.on("click tap", (e) => {
+      e.cancelBubble = true;
+      const pos = stage.getPointerPosition();
+      showPanelMenu(pos, i);
+    });
+
+    // ✅ TABLET İÇİN UZUN BAS
+    let pressTimer = null;
+    panelGroup.on("mousedown touchstart", () => {
+      pressTimer = setTimeout(() => {
+        const pos = stage.getPointerPosition();
+        showPanelMenu(pos, i);
+      }, 600);
+    });
+
+    panelGroup.on("mouseup touchend mouseleave", () => {
+      clearTimeout(pressTimer);
+    });
+
+    // 🔹 KISA PANEL İŞARETİ
+    panelGroup.add(new Konva.Line({
+      points: [
+        0,
+        -altKasaH - panelNumOffset + panelLineGap,
+        0,
+        -altKasaH - panelNumOffset + panelLineGap + panelLineHeight
+      ],
+      stroke: "black",
+      strokeWidth: 2
+    }));
+
+    // 🔢 PANEL NUMARASI
+    const panelNumber = new Konva.Text({
+      x: segmentPx / 2 - 5,
+      y: -altKasaH - panelNumOffset,
+      text: (i + 1).toString(),
+      fontSize: 14,
+      fill: "black"
+    });
+    panelGroup.add(panelNumber);
+
+    // 🔹 OK (AÇILMA YÖNÜ)
+const defaultDir = getDefaultArrowDirection(i, count);
+const arrow = new Konva.Text({
+  x: segmentPx / 2,
+  y: arrowOffset,
+  text: defaultDir === "right" ? "→" : "←",
+  fontSize: 26,
+  fontStyle: "bold",
+  fill: "black",
+  align: "center",
+  offsetX: 8,
+  listening: true
+});
+
+
+
+
+    arrow.on("click tap", () => {
+      arrow.text(arrow.text() === "→" ? "←" : "→");
+      panelLayer.batchDraw();
+    });
+
+    panelGroup.add(arrow);
+
+    // 🔹 PANEL GENİŞLİK ÖLÇÜSÜ (TEK VE REFERANSLI)
+    const measureText = new Konva.Text({
+      x: segmentPx / 2 - 15,
+      y: measureOffset,
+      text: segmentMM.toFixed(2),
+      fontSize: 12,
+      fill: "black"
+    });
+    panelGroup.add(measureText);
+
+    // 🔹 GROUP'U LAYER'A EKLE
+    panelLayer.add(panelGroup);
+
+    // 🔹 PANEL KAYDI
+    panels.push({
+      index: i,
+      widthMM: segmentMM,
+      direction: defaultDir,
+      fixed: false,
+      type: null,
+      arrowNode: arrow,
+      group: panelGroup,
+      measureText: measureText, // ✅ REFERANS DOĞRU
+      extras: {}
+    });
+  }
+
+  // 🔹 SON PANEL KISA İŞARETİ
+  const endX = baseX + segmentPx * count;
+  const panelNumY = baseY - altKasaH - panelNumOffset;
+
+  panelLayer.add(new Konva.Line({
+    points: [
+      endX,
+      panelNumY + panelLineGap,
+      endX,
+      panelNumY + panelLineGap + panelLineHeight
+    ],
+    stroke: "black",
+    strokeWidth: 2
+  }));
+
+  panelLayer.batchDraw();
+}
+
+
+function drawPanelCountControl(panelCount) {
+
+  // 🔁 Önce varsa eskiyi temizle
+  if (panelControlGroup) {
+    panelControlGroup.destroy();
+  }
+
+  // 🧠 UI GRUP (SAHNEYE BAĞLI DEĞİL)
+  panelControlGroup = new Konva.Group({
+    draggable: false,   // ❌ sürüklenmez
+    listening: true     // ✅ + / - çalışsın
+  });
+
+  const bg = new Konva.Rect({
+    width: 170,
+    height: 48,
+    fill: "rgba(0,0,0,0.75)",
+    cornerRadius: 8
+  });
+
+  const text = new Konva.Text({
+    x: 12,
+    y: 14,
+    text: `Panel: ${panelCount}`,
+    fontSize: 16,
+    fill: "white",
+    fontStyle: "bold"
+  });
+
+  const minus = new Konva.Text({
+    x: 115,
+    y: 10,
+    text: "−",
+    fontSize: 26,
+    fill: "white"
+  });
+
+  const plus = new Konva.Text({
+    x: 140,
+    y: 10,
+    text: "+",
+    fontSize: 26,
+    fill: "white"
+  });
+
+  panelControlGroup.add(bg, text, minus, plus);
+
+  // 🔝 SADECE UI LAYER
+  uiLayer.add(panelControlGroup);
+
+  // 📍 SAĞ ALT (EKRAN REFERANSLI)
+if (panelControlGroup) {
+  panelControlGroup.position({
+    x: stage.width() - 190,
+    y: stage.height() - 90
+  });
+}
+
+  // ➖
+  minus.on("click tap", () => {
+    if (panelCount > 1) {
+      redrawPanels(panelCount - 1);
+    }
+  });
+
+  // ➕
+  plus.on("click tap", () => {
+    redrawPanels(panelCount + 1);
+  });
+
+  // ❗ UI redraw
+  uiLayer.batchDraw();
+}
+
+let undoRedoGroup = null;
+
+function drawUndoRedoControls() {
+
+  if (undoRedoGroup) {
+    undoRedoGroup.destroy();
+  }
+
+  undoRedoGroup = new Konva.Group({
+    draggable: false,
+    listening: true
+  });
+
+  const bg = new Konva.Rect({
+    width: 120,
+    height: 48,
+    fill: "rgba(0,0,0,0.75)",
+    cornerRadius: 8
+  });
+
+  const undoText = new Konva.Text({
+    x: 18,
+    y: 12,
+    text: "⟲",
+    fontSize: 28,
+    fill: "white"
+  });
+
+  const redoText = new Konva.Text({
+    x: 70,
+    y: 12,
+    text: "⟳",
+    fontSize: 28,
+    fill: "white"
+  });
+
+  undoRedoGroup.add(bg, undoText, redoText);
+  uiLayer.add(undoRedoGroup);
+
+  // 📍 Panel kontrolünün SOLUNA koyuyoruz
+  undoRedoGroup.position({
+    x: stage.width() - 190 - 130,
+    y: stage.height() - 90
+  });
+
+  // 🔙 UNDO
+  undoText.on("click tap", () => {
+    undo();
+  });
+
+  // 🔜 REDO
+  redoText.on("click tap", () => {
+    redo();
+  });
+
+  uiLayer.batchDraw();
+}
+
+
+
+
+function redrawPanels(newCount) {
+  pushUndoState(); // 🔴 BURAYA
+
+  panelLayer.destroyChildren();
+
+  drawPanelsYatay(
+    mainStartPoint,
+    currentLengthMM,
+    "right",
+    newCount
+  );
+
+  drawHeightText(currentHeightMM);
+  drawPanelCountControl(newCount);
+}
+
+
+
+
+/* ================= YÜKSEKLİK ================= */
+function drawHeightText(heightMM) {
+  if (heightText) heightText.destroy();
+
+  const box = currentProfile.group.meta.measureText.getClientRect({ relativeTo: layer });
+
+  heightText = new Konva.Text({
+    x: box.x,
+    y: box.y - 40,
+    text: `Sistem Yüksekliği: ${Math.round(heightMM)} mm`,
+    fontSize: 16,
+    fill: "black",
+    fontStyle: "bold"
+  });
+
+  layer.add(heightText);
+
+  // 🔴 BU SATIR YOKTU → O YÜZDEN ÇALIŞMIYORDU
+  makeHeightEditable(heightText);
+
+  layer.batchDraw();
+}
+
+
+
+/* ================= PANEL SAYISI ================= */
+function editPanels() {
+  const val = prompt("Yeni panel sayısı:", panels.length);
+  if (!val || isNaN(val) || val <= 0) return;
+
+drawPanelsYatay(
+  mainStartPoint,
+  currentLengthMM,
+  "right",
+  parseInt(val)
+);
+
+
+  drawHeightText(currentHeightMM);
+}
+
+/* ================= YENİ ÇİZİM ================= */
+function newDraw() {
+  initDuzBalkon();
+}
+/* ================= ZOOM ================= */
+let scaleBy = 1.05;
+
+stage.on("wheel", (e) => {
+  e.evt.preventDefault();
+
+  const oldScale = stage.scaleX();
+  const pointer = stage.getPointerPosition();
+
+  const mousePointTo = {
+    x: (pointer.x - stage.x()) / oldScale,
+    y: (pointer.y - stage.y()) / oldScale,
+  };
+
+  const direction = e.evt.deltaY > 0 ? -1 : 1;
+  const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+
+  stage.scale({ x: newScale, y: newScale });
+
+  const newPos = {
+    x: pointer.x - mousePointTo.x * newScale,
+    y: pointer.y - mousePointTo.y * newScale,
+  };
+
+  stage.batchDraw();
+  drawGrid();
+  keepUIFixed(); // 👈 EKLE
+});
+
+/* ================= PAN ================= */
+let isDragging = false;
+let lastPos = null;
+
+stage.on("mousedown touchstart", (e) => {
+  if (drawMode) return;
+  if (e.target === stage) {
+    isDragging = true;
+    lastPos = stage.getPointerPosition();
+  }
+});
+
+stage.on("mousemove touchmove", () => {
+  if (!isDragging) return;
+  const pos = stage.getPointerPosition();
+  stage.x(stage.x() + pos.x - lastPos.x);
+  stage.y(stage.y() + pos.y - lastPos.y);
+  stage.batchDraw();
+  drawGrid();
+  keepUIFixed(); // 👈 EKLE
+  lastPos = pos;
+});
+
+
+stage.on("mouseup touchend", () => isDragging = false);
+
+
+/* ================= PINCH ZOOM (TABLET) ================= */
+let lastDist = 0;
+
+stage.on("touchmove", (e) => {
+  const t1 = e.evt.touches[0];
+  const t2 = e.evt.touches[1];
+
+  // Tek parmaksa PAN çalışsın
+  if (!t1 || !t2) return;
+
+  e.evt.preventDefault();
+
+  const dist = Math.hypot(
+    t1.clientX - t2.clientX,
+    t1.clientY - t2.clientY
+  );
+
+  if (!lastDist) {
+    lastDist = dist;
+    return;
+  }
+
+  const oldScale = stage.scaleX();
+  const scaleBy = dist / lastDist;
+  const newScale = oldScale * scaleBy;
+
+  // 🔒 Aşırı zoom engeli
+  if (newScale < 0.3 || newScale > 5) return;
+
+  stage.scale({ x: newScale, y: newScale });
+
+  lastDist = dist;
+
+  stage.batchDraw();
+  drawGrid();
+  keepUIFixed();
+});
+
+stage.on("touchend", () => {
+  lastDist = 0;
+});
+
+
+
+//* ================= PANEL LONG PRESS ================= */
+//stage.on("mousedown touchstart", (e) => {
+  //if (drawMode || editing) return;
+
+  //const target = e.target;
+
+  //if (
+    //target &&
+    //target.getClassName() === "Rect" &&
+    //target.name() === "altKasa"
+  //) {
+    //longPressTimer = setTimeout(() => {
+      //const pos = stage.getPointerPosition();
+      //showPanelInput(pos);
+    //}, 500);
+  //}
+//});
+
+//stage.on("mouseup touchend", () => clearTimeout(longPressTimer));
+
+
+//function showPanelInput(position) {
+  //const old = document.getElementById("panel-input");
+  //if (old) old.remove();
+
+  //const div = document.createElement("div");
+  //div.id = "panel-input";
+  //div.style.position = "absolute";
+  //div.style.left = position.x - 70 + "px";
+  //div.style.top = position.y - 60 + "px";
+  //div.style.background = "#fff";
+  //div.style.border = "2px solid #333";
+  //div.style.padding = "8px";
+  //div.style.borderRadius = "6px";
+  //div.style.zIndex = 999;
+
+  //div.innerHTML = `
+    //<label>Panel Sayısı:</label>
+    //<input id="panelCountInput" type="number" style="width:60px;">
+    //<button id="okBtn">Tamam</button>
+  //`;
+
+  //document.body.appendChild(div);
+
+  //document.getElementById("okBtn").onclick = () => {
+    //const val = parseInt(document.getElementById("panelCountInput").value);
+    //if (!val || val <= 0) return;
+
+    //panelLayer.destroyChildren();
+
+    //drawPanelsYatay(
+  //mainStartPoint,
+  //currentLengthMM,
+  //"right",
+  //val
+//);
+
+
+    //drawHeightText(currentHeightMM);
+    //div.remove();
+  //};
+//}
+
+function makeEditable(textNode) {
+  textNode.on("pointerdown", (e) => {
+    e.cancelBubble = true;
+    editing = true;
+
+    const absPos = textNode.getAbsolutePosition();
+    const stageBox = stage.container().getBoundingClientRect();
+
+    const input = document.createElement("input");
+    input.type = "number";
+    input.className = "inline-editor";
+    input.value = parseFloat(textNode.text().replace(/[^\d.]/g, ""));
+    input.style.left = stageBox.left + absPos.x + "px";
+    input.style.top  = stageBox.top  + absPos.y + "px";
+
+    // 🔴 MOBİL KLAVYE ZORLA
+    input.setAttribute("inputmode", "numeric");
+    input.setAttribute("pattern", "[0-9]*");
+
+    document.body.appendChild(input);
+
+    setTimeout(() => {
+      input.focus();
+    }, 0);
+
+    let removed = false;
+    function safeRemove() {
+      if (!removed && input.parentNode) {
+        input.remove();
+        removed = true;
+        editing = false;
+      }
+    }
+
+    input.onkeydown = (ev) => {
+      if (ev.key === "Enter") {
+        const newVal = parseFloat(input.value);
+        if (isNaN(newVal) || newVal <= 0) {
+          safeRemove();
+          return;
+        }
+
+        if (textNode.text().startsWith("En")) {
+     pushUndoState(); // 🔴 BURAYA
+          currentLengthMM = newVal;
+
+          layer.destroyChildren();
+          panelLayer.destroyChildren();
+          profiles = {};
+          panels = [];
+          currentProfile = null;
+
+          const screenStart = mainStartPoint || worldToScreen({ x: 0, y: 0 });
+          startPoint = screenStart;
+
+          currentProfile = drawProfileFixed(
+            screenStart,
+            currentLengthMM,
+            0,
+            "En",
+            "yatay"
+          );
+
+          drawPanelsYatay(
+            screenStart,
+            currentLengthMM,
+            "right",
+            4
+          );
+
+          if (currentHeightMM > 0) {
+            drawHeightText(currentHeightMM);
+          }
+
+          layer.batchDraw();
+    centerDrawingToScreen(); // 👈 BUNU EKLE
+        } else {
+          const group = textNode.getParent();
+          group.children.forEach((rect) => {
+            if (rect.className === "Rect") {
+              rect.height(newVal * mmToPx);
+            }
+          });
+          layer.batchDraw();
+        }
+
+        safeRemove();
+      }
+    };
+
+    input.onblur = safeRemove;
+  });
+}
+
+
+
+function makeHeightEditable(textNode) {
+  textNode.on("click tap mousedown touchstart", (e) => { // ➕ EK
+    e.cancelBubble = true;
+    if (e.evt) e.evt.preventDefault(); // ➕ EK
+
+    const absPos = textNode.getAbsolutePosition();
+    const stageBox = stage.container().getBoundingClientRect();
+
+    const input = document.createElement("input");
+    input.type = "number";
+    input.className = "inline-editor";
+    input.value = parseFloat(textNode.text().replace(/[^\d.]/g, ""));
+    input.style.left = stageBox.left + absPos.x + "px";
+    input.style.top  = stageBox.top  + absPos.y + "px";
+
+    document.body.appendChild(input);
+    input.focus();
+
+    setTimeout(() => {   // ➕ EK
+      input.focus();     // ➕ EK
+      input.click();     // ➕ EK
+    }, 30);              // ➕ EK
+
+    let removed = false;
+    function safeRemove() {
+      if (!removed && input.parentNode) {
+        input.remove();
+        removed = true;
+      }
+    }
+
+    input.onkeydown = (ev) => {
+      if (ev.key === "Enter") {
+        const val = parseFloat(input.value);
+        if (!isNaN(val) && val > 0) {
+    pushUndoState(); // 🔴 ENTER öncesi
+          currentHeightMM = val;
+          textNode.text(`Sistem Yüksekliği: ${Math.round(val)} mm`);
+          layer.batchDraw();
+        }
+        safeRemove();
+      }
+    };
+
+    input.onblur = () => safeRemove();
+  });
+}
+
+
+/* ================= PANEL MENU ================= */
+function showPanelMenu(position, index) {
+  const old = document.getElementById("panel-menu");
+  if (old) old.remove();
+
+  const menu = document.createElement("div");
+  menu.id = "panel-menu";
+  menu.style.position = "absolute";
+  menu.style.left = position.x - 60 + "px";
+  menu.style.top = position.y - 70 + "px";
+  menu.style.background = "#222";
+  menu.style.padding = "6px";
+  menu.style.borderRadius = "6px";
+  menu.style.color = "#fff";
+  menu.style.zIndex = 999;
+
+  menu.innerHTML = `
+    <button onclick="setFixed(${index})">🧱 Sabit</button>
+    <button onclick="drawMenfezSimple(${index})">🌬️ Menfez</button>
+    <button onclick="drawBacaSimple(${index})">🔥 Baca</button>
+    <button onclick="this.parentNode.remove()">❌</button>
+  `;
+
+  document.body.appendChild(menu);
+}
+
+/* ================= SABİT PANEL ================= */
+function setFixed(index) {
+  pushUndoState(); // 🔴 EN BAŞA  
+  const panel = panels[index];
+  if (!panel) return;
+
+  panel.fixed = true;
+  panel.type = "sabit";
+
+  // OK → X
+  if (panel.arrowNode) {
+    panel.arrowNode.text("X");
+    panel.arrowNode.fill("red");
+    panel.arrowNode.off("click tap");
+  }
+
+  makePanelMeasureEditable(panel);
+  recalcPanels();
+  relayoutPanels();
+}
+
+
+function makePanelMeasureEditable(panel) {
+  const textNode = panel.measureText;
+  if (!textNode) return;
+
+  textNode.off("click tap");
+
+  textNode.on("click tap mousedown touchstart", (e) => { // ➕ EK
+    e.cancelBubble = true;
+    if (e.evt) e.evt.preventDefault(); // ➕ EK
+
+    const absPos = textNode.getAbsolutePosition();
+    const stageBox = stage.container().getBoundingClientRect();
+
+    const input = document.createElement("input");
+    input.type = "number";
+    input.className = "inline-editor";
+    input.value = panel.widthMM.toFixed(2);
+
+    input.style.left = stageBox.left + absPos.x + "px";
+    input.style.top  = stageBox.top  + absPos.y + "px";
+
+    document.body.appendChild(input);
+    input.focus();
+
+    setTimeout(() => {   // ➕ EK
+      input.focus();     // ➕ EK
+      input.click();     // ➕ EK
+    }, 30);              // ➕ EK
+
+    input.onkeydown = (ev) => {
+      if (ev.key === "Enter") {
+        const val = parseFloat(input.value);
+        if (isNaN(val) || val <= 0) {
+          input.remove();
+          return;
+        }
+
+   pushUndoState(); // 🔴 ENTER'dan HEMEN ÖNCE
+
+        panel.widthMM = val;
+        textNode.text(val.toFixed(2));
+
+        recalcPanels();
+        relayoutPanels();
+        redrawPanelMeasures();
+
+        input.remove();
+      }
+    };
+
+    input.onblur = () => input.remove();
+  });
+}
+
+
+function redrawPanelMeasures() {
+  panels.forEach((p) => {
+    if (p.measureText) {
+      p.measureText.text(p.widthMM.toFixed(2));
+    }
+  });
+  panelLayer.batchDraw();
+}
+
+
+/* ================= PANEL RECALC ================= */
+function recalcPanels() {
+  const total = currentLengthMM;
+  const fixed = panels.filter(p => p.fixed).reduce((a, b) => a + b.widthMM, 0);
+  const free = panels.filter(p => !p.fixed);
+  const kalan = (total - fixed) / free.length;
+
+  free.forEach(p => p.widthMM = kalan);
+}
+
+/* ================= MENFEZ ================= */
+function drawMenfezSimple(index) {
+   pushUndoState(); // 🔴 EN BAŞA
+  const panel = panels[index];
+  if (!panel) return;
+
+  panel.type = "menfez";
+
+// ✅ OK KALIR – sadece yön değiştirmesi engellenir
+if (panel.arrowNode) {
+  panel.arrowNode.off("click tap");
+}
+
+
+  // Eski menfez varsa sil
+  if (panel.extras.menfezGroup) {
+    panel.extras.menfezGroup.destroy();
+  }
+
+  const g = panel.group;
+  const segmentPx = g.meta.widthPx;
+  const altKasaH = 70.16 * mmToPx;
+
+  // 🔴 PANELİN TAM ORTASI
+  const cx = segmentPx / 2;
+  const cy = -altKasaH - 60;
+
+  const menfezGroup = new Konva.Group();
+
+  const circle = new Konva.Circle({
+    x: cx,
+    y: cy,
+    radius: (160 / 2) * mmToPx,
+    stroke: "black",
+    strokeWidth: 2
+  });
+
+  const label = new Konva.Text({
+    text: "MENFEZ",
+    fontSize: 12,
+    fontStyle: "bold",
+    fill: "black"
+  });
+
+  label.position({
+    x: cx - label.width() / 2,
+    y: cy - 30
+  });
+
+  menfezGroup.add(circle, label);
+
+  // 🔴 PANEL GROUP İÇİNE EKLENİR
+  g.add(menfezGroup);
+
+  panel.extras.menfezGroup = menfezGroup;
+
+  panelLayer.batchDraw();
+}
+
+
+
+/* ================= BACA ================= */
+function drawBacaSimple(index) {
+  pushUndoState();
+
+  const panel = panels[index];
+  if (!panel) return;
+
+  panel.type = "baca";
+
+  if (panel.arrowNode) {
+    panel.arrowNode.off("click tap");
+  }
+
+  if (panel.extras.bacaGroup) {
+    panel.extras.bacaGroup.destroy();
+  }
+
+  const g = panel.group;
+  const segmentPx = g.meta.widthPx;
+
+  // ✅ ÖNCE ÖLÇÜ REFERANSI ALINIR
+ const measureY = panel.measureText ? panel.measureText.y() : 33;
+const camTopY = measureY + 50; // 🔴 TEK DOĞRU REFERANS
+
+  // 📌 Baca verisi
+const baca = {
+  xMM: panel.widthMM / 2,   // panel ortası
+  yMM: 200,                 // üstten 200 mm
+  capMM: 120
+};;
+
+  const bacaGroup = new Konva.Group();
+
+  // 🪟 Cam alanı (ölçünün ALTINDAN başlar)
+  const camRect = new Konva.Rect({
+    x: 0,
+    y: measureY + 50,
+    width: segmentPx,
+    height: currentHeightMM * mmToPx,
+    stroke: "#999",
+    dash: [6, 4],
+    listening: false
+  });
+
+  // 🔵 Baca deliği
+const circle = new Konva.Circle({
+  x: baca.xMM * mmToPx,
+  y: camTopY + baca.yMM * mmToPx, // ✅ ARTIK CAMDAN ÖLÇÜLÜYOR
+  radius: (baca.capMM / 2) * mmToPx,
+  stroke: "black",
+  strokeWidth: 2
+});
+
+  // 📝 Etiket
+  const label = new Konva.Text({
+    text: "BACA",
+    fontSize: 12,
+    fontStyle: "bold",
+    fill: "black"
+  });
+
+  label.position({
+    x: circle.x() - label.width() / 2,
+    y: circle.y() - circle.radius() - 18
+  });
+
+circle.on("click tap", (e) => {
+  e.cancelBubble = true;
+  showBacaMeasurePanel(panel, baca);
+});
+
+
+  // 🔄 Drag sınırları (ölçünün ALTINDAN başlar)
+  circle.on("dragmove", () => {
+    const r = circle.radius();
+
+    const minX = r;
+    const maxX = segmentPx - r;
+    circle.x(Math.max(minX, Math.min(circle.x(), maxX)));
+
+    const minY = measureY + r + 20;
+    const maxY = currentHeightMM * mmToPx - r;
+    circle.y(Math.max(minY, Math.min(circle.y(), maxY)));
+
+baca.xMM = circle.x() / mmToPx;
+baca.yMM = (circle.y() - camTopY) / mmToPx; // ✅ CAM REFERANSI
+
+    label.position({
+      x: circle.x() - label.width() / 2,
+      y: circle.y() - r - 18
+    });
+
+    panelLayer.batchDraw();
+  });
+
+  // ✅ GRUBA EKLE
+  bacaGroup.add(camRect, circle, label);
+  g.add(bacaGroup);
+
+  panel.extras.bacaGroup = bacaGroup;
+  panel.extras.baca = baca;
+
+  panelLayer.batchDraw();
+}
+
+
+
+/* ================= SAVE ================= */
+function saveToGoogleSheet() {
+  fetch(
+    "https://script.google.com/macros/s/AKfycbz8g_TO4u5HNqHGpHw8HdDhVbiAVHZej34ume8ZbNpaawOHRHHr1QzQmwzFjzIXgvjANA/exec",
+    {
+      method: "POST",
+      mode: "no-cors",
+      body: JSON.stringify({
+        lengthMM: currentLengthMM,
+        heightMM: currentHeightMM,
+        panels
+      })
+    }
+  );
+  alert("Kaydedildi");
+}
+
+function relayoutPanels() {
+  let cursorX = mainStartPoint.x;
+
+  panels.forEach(p => {
+    p.group.x(cursorX);
+    p.group.meta.widthPx = p.widthMM * mmToPx;
+    cursorX += p.widthMM * mmToPx;
+  });
+
+  panelLayer.batchDraw();
+}
+
+
+function redrawPanelMeasures() {
+  panels.forEach(p => {
+    if (p.measureText) {
+      p.measureText.text(p.widthMM.toFixed(2));
+    }
+  });
+  panelLayer.batchDraw();
+}
+
+
+function keepUIFixed() {
+  const scale = stage.scaleX();
+
+  uiLayer.position({
+    x: -stage.x() / scale,
+    y: -stage.y() / scale
+  });
+
+  uiLayer.scale({
+    x: 1 / scale,
+    y: 1 / scale
+  });
+
+  if (panelControlGroup) {
+    panelControlGroup.position({
+      x: stage.width() - 190,
+      y: stage.height() - 90
+    });
+  }
+
+  if (undoRedoGroup) {
+    undoRedoGroup.position({
+      x: stage.width() - 190 - 130,
+      y: stage.height() - 90
+    });
+  }
+
+  uiLayer.batchDraw();
+}
+
+
+
+// ================= START =================
+drawGrid();
+initDuzBalkon();
+keepUIFixed();
+drawUndoRedoControls();
+
+function resizeStage() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+
+  stage.width(w);
+  stage.height(h);
+
+  // ❌ stage.position SIFIRLAMA
+  // ❌ stage.scale SIFIRLAMA
+
+  // ✅ UI sabitlenir
+  keepUIFixed();
+
+  // ✅ grid yeniden çizilir
+  drawGrid();
+
+  stage.batchDraw();
+}
+
+
+
+
+// 📱 Tablet döndürme + pencere resize
+window.addEventListener("resize", resizeStage);
+window.addEventListener("orientationchange", resizeStage);
+
+function applyState(state) {
+  if (!state) return;
+
+  isRestoringState = true; // 🔒 restore başlıyor
+  try {
+
+    currentLengthMM = state.currentLengthMM;
+    currentHeightMM = state.currentHeightMM;
+
+    // 🔥 TEMİZLE
+    layer.destroyChildren();
+    panelLayer.destroyChildren();
+    panels = [];
+    profiles = {};
+
+    const screenStart = {
+      x: stage.width() / 2 - (currentLengthMM * mmToPx) / 2,
+      y: stage.height() / 2
+    };
+    mainStartPoint = screenStart;
+
+    // 🔹 PROFİL
+    currentProfile = drawProfileFixed(
+      screenStart,
+      currentLengthMM,
+      0,
+      "En",
+      "yatay"
+    );
+
+    // 🔹 PANELLER
+    drawPanelsYatay(
+      screenStart,
+      currentLengthMM,
+      "right",
+      state.panels.length
+    );
+
+    // 🔹 PANEL STATE GERİ YÜKLE
+    state.panels.forEach((s, i) => {
+      const p = panels[i];
+      if (!p) return;
+
+      p.widthMM = s.widthMM;
+      p.fixed = s.fixed;
+      p.type = s.type;
+      p.direction = s.direction;
+
+      if (s.fixed) {
+        p.arrowNode.text("X");
+        p.arrowNode.fill("red");
+        p.arrowNode.off();
+      }
+
+      if (s.type === "menfez") {
+        drawMenfezSimple(i);
+      }
+
+      if (s.type === "baca") {
+        drawBacaSimple(i);
+      }
+    });
+
+    relayoutPanels();
+    redrawPanelMeasures();
+    drawHeightText(currentHeightMM);
+    drawPanelCountControl(panels.length);
+    centerDrawingToScreen();
+
+  } finally {
+    isRestoringState = false; // 🔓 restore bitti (ÇOK KRİTİK)
+  }
+}
+
+
+
+
+function getStateSnapshot() {
+  return {
+    currentLengthMM,
+    currentHeightMM,
+    panels: panels.map(p => ({
+      widthMM: p.widthMM,
+      fixed: p.fixed,
+      type: p.type,
+      direction: p.direction,
+  baca: p.extras.baca || null
+    }))
+  };
+}
+
+function pushUndoState() {
+  if (isRestoringState) return; // ✅ restore sırasında history yazma
+
+  undoStack.push(getStateSnapshot());
+
+  if (undoStack.length > MAX_HISTORY) {
+    undoStack.shift();
+  }
+
+  redoStack.length = 0; // yeni işlem → redo silinir
+}
+
+
+
+function undo() {
+  if (undoStack.length === 0) return;
+
+  redoStack.push(getStateSnapshot());
+  const prev = undoStack.pop();
+  applyState(prev);
+}
+
+function redo() {
+  if (redoStack.length === 0) return;
+
+  undoStack.push(getStateSnapshot());
+  const next = redoStack.pop();
+  applyState(next);
+}
+
+
+/* ================= UNDO / REDO SHORTCUT ================= */
+window.addEventListener("keydown", (e) => {
+  if (e.ctrlKey && e.key === "z") {
+    e.preventDefault();
+    undo();
+  }
+
+  if (e.ctrlKey && (e.key === "y" || (e.shiftKey && e.key === "Z"))) {
+    e.preventDefault();
+    redo();
+  }
+});
+
+function centerDrawingToScreen() {
+  const box = layer.getClientRect({ skipTransform: true });
+
+  if (!box || box.width === 0 || box.height === 0) return;
+
+  const stageW = stage.width();
+  const stageH = stage.height();
+
+  const scale = stage.scaleX();
+
+  const targetX =
+    stageW / 2 - (box.x + box.width / 2) * scale;
+  const targetY =
+    stageH / 2 - (box.y + box.height / 2) * scale;
+
+  stage.position({
+    x: targetX,
+    y: targetY
+  });
+
+  stage.batchDraw();
+}
+
+function showBacaMeasurePanel(panel, baca) {
+  // eski panel varsa kapat
+  const old = document.getElementById("baca-measure-panel");
+  if (old) old.remove();
+
+  const panelWidthMM = panel.widthMM;
+  const panelHeightMM = currentHeightMM;
+
+const sol = 0;
+const sag = 0;
+const ust = 0;
+const alt = 0;
+
+  const div = document.createElement("div");
+  div.id = "baca-measure-panel";
+  div.style.position = "absolute";
+  div.style.right = "20px";
+  div.style.top = "120px";
+  div.style.background = "#222";
+  div.style.color = "#fff";
+  div.style.padding = "12px";
+  div.style.borderRadius = "8px";
+  div.style.zIndex = 2000;
+  div.style.width = "180px";
+  div.style.fontSize = "13px";
+
+  div.innerHTML = `
+    <div style="font-weight:bold; margin-bottom:8px;">🔥 Baca Ölçüleri (mm)</div>
+
+    <label>Sol</label>
+    <input id="baca-sol" type="number" value="${sol}" style="width:100%">
+
+    <label>Sağ</label>
+    <input id="baca-sag" type="number" value="${sag}" style="width:100%">
+
+    <label>Üst</label>
+    <input id="baca-ust" type="number" value="${ust}" style="width:100%">
+
+    <label>Alt</label>
+    <input id="baca-alt" type="number" value="${alt}" style="width:100%">
+
+    <button id="baca-apply" style="margin-top:8px; width:100%">Uygula</button>
+    <button id="baca-close" style="margin-top:4px; width:100%">Kapat</button>
+  `;
+
+  document.body.appendChild(div);
+
+  document.getElementById("baca-close").onclick = () => div.remove();
+
+  document.getElementById("baca-apply").onclick = () => {
+    applyBacaMeasurements(panel, baca);
+  };
+}
+
+
+function applyBacaMeasurements(panel, baca) {
+  const sol = parseFloat(document.getElementById("baca-sol").value) || 0;
+  const sag = parseFloat(document.getElementById("baca-sag").value) || 0;
+  const ust = parseFloat(document.getElementById("baca-ust").value) || 0;
+  const alt = parseFloat(document.getElementById("baca-alt").value) || 0;
+
+  baca.sol = sol;
+  baca.sag = sag;
+  baca.ust = ust;
+  baca.alt = alt;
+
+  if (sol > 0) {
+    baca.xMM = sol;
+  } else if (sag > 0) {
+    baca.xMM = panel.widthMM - sag;
+  }
+
+  if (ust > 0) {
+    baca.yMM = ust;
+  } else if (alt > 0) {
+    baca.yMM = currentHeightMM - alt;
+  }
+
+  updateBacaVisual(panel, baca);
+  drawBacaMeasureLines(panel, baca);
+}
+
+
+
+function drawBacaMeasureLines(panel, baca) {
+  const g = panel.extras.bacaGroup;
+  if (!g) return;
+
+  // Eski ölçüleri temizle
+  g.find(".baca-measure").forEach(n => n.destroy());
+
+  const measureY = panel.measureText.y();
+  const camTopY = measureY + 50;
+
+  // ✅ Baca merkezi (TEK DOĞRU REFERANS)
+  const cx = baca.xMM * mmToPx;
+  const cy = camTopY + baca.yMM * mmToPx;
+
+  const style = {
+    stroke: "black",
+    strokeWidth: 2,
+    name: "baca-measure"
+  };
+
+  /* ================= SAĞ ================= */
+  if (baca.sag > 0) {
+    g.add(new Konva.Line({
+      points: [cx, cy, cx + baca.sag * mmToPx, cy],
+      ...style
+    }));
+
+    g.add(new Konva.Text({
+      x: cx + baca.sag * mmToPx + 5,
+      y: cy - 8,
+      text: `Sağ: ${baca.sag}`,
+      fontSize: 12,
+      fill: "black",
+      name: "baca-measure"
+    }));
+  }
+
+  /* ================= SOL ================= */
+  if (baca.sol > 0) {
+    g.add(new Konva.Line({
+      points: [cx, cy, cx - baca.sol * mmToPx, cy],
+      ...style
+    }));
+
+    g.add(new Konva.Text({
+      x: cx - baca.sol * mmToPx - 40,
+      y: cy - 8,
+      text: `Sol: ${baca.sol}`,
+      fontSize: 12,
+      fill: "black",
+      name: "baca-measure"
+    }));
+  }
+
+  /* ================= ALT ================= */
+  if (baca.alt > 0) {
+    g.add(new Konva.Line({
+      points: [cx, cy, cx, cy + baca.alt * mmToPx],
+      ...style
+    }));
+
+    g.add(new Konva.Text({
+      x: cx - 35,
+      y: cy + baca.alt * mmToPx + 5,
+      text: `Alt: ${baca.alt}`,
+      fontSize: 12,
+      fill: "black",
+      name: "baca-measure"
+    }));
+  }
+
+  /* ================= ÜST ================= */
+  if (baca.ust > 0) {
+    g.add(new Konva.Line({
+      points: [cx, cy, cx, cy - baca.ust * mmToPx],
+      ...style
+    }));
+
+    g.add(new Konva.Text({
+      x: cx - 35,
+      y: cy - baca.ust * mmToPx - 18,
+      text: `Üst: ${baca.ust}`,
+      fontSize: 12,
+      fill: "black",
+      name: "baca-measure"
+    }));
+  }
+
+  panelLayer.batchDraw();
+}
+
+
+function updateBacaVisual(panel, baca) {
+  const g = panel.extras.bacaGroup;
+  if (!g) return;
+
+  const circle = g.findOne("Circle");
+  const label  = g.findOne("Text");
+
+  const measureY = panel.measureText.y();
+  const camTopY = measureY + 50;
+
+  circle.position({
+    x: baca.xMM * mmToPx,
+    y: camTopY + baca.yMM * mmToPx
+  });
+
+  label.position({
+    x: circle.x() - label.width() / 2,
+    y: circle.y() - circle.radius() - 18
+  });
+
+  panelLayer.batchDraw();
+}
+
+
+</script>
+</body>
+</html>
