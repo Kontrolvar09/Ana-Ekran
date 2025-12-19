@@ -6,123 +6,133 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f2f4f7;
-    }
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f2f4f7;
+  }
 
-    /* ANA YAPI */
-    .app-container {
-      display: flex;
-      height: 100vh;
-      width: 100vw;
-      overflow: hidden;
-    }
+  /* ANA YAPI */
+  .app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+  }
 
-    /* SOL PANEL */
-    .left-panel {
-      width: 340px;
-      background: #ffffff;
-      border-right: 1px solid #ddd;
-      padding: 12px;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      z-index: 5;
-    }
+  /* SOL PANEL */
+  .left-panel {
+    width: 340px;
+    background: #ffffff;
+    border-right: 1px solid #ddd;
+    padding: 12px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 5;
+  }
 
-    .left-panel.hidden {
-      display: none;
-    }
+  .left-panel.hidden {
+    display: none;
+  }
 
-    /* TOGGLE BUTON */
-    .toggle-btn {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      z-index: 1000;
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 18px;
-      cursor: pointer;
-      display: none;
-    }
+  /* TOGGLE BUTON */
+  .toggle-btn {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 18px;
+    cursor: pointer;
+    display: none;
+  }
 
-    /* TEKLİF BİLGİLERİ */
-    .info-text {
-      font-size: 12px;
-      color: #222;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
+  /* TEKLİF BİLGİLERİ */
+  .info-text {
+    font-size: 12px;
+    color: #222;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
 
-    .info-row {
-      display: grid;
-      grid-template-columns: 1.25fr 0.85fr;
-      column-gap: 26px;
-    }
+  .info-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 20px;
+  }
 
-    .info-row.single {
-      grid-template-columns: 1fr;
-    }
+  .info-row.single {
+    grid-template-columns: 1fr;
+  }
 
-    .info-item {
-      display: grid;
-      grid-template-columns: 70px 1fr;
-      column-gap: 6px;
-      align-items: center;
-    }
+  /* 🔧 ASIL DÜZELTİLEN KISIM */
+  .info-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
 
-    .info-item strong {
-      font-weight: 600;
-      white-space: nowrap;
-    }
+  .info-item strong {
+    width: 75px;          /* label hizası */
+    flex-shrink: 0;
+    font-weight: 600;
+    white-space: nowrap;
+  }
 
-    .divider {
-      height: 2px;
-      background: #e53935;
-      margin: 6px 0;
-      width: 100%;
-    }
+  .info-item span {
+    white-space: nowrap;  /* alt satıra düşmesin */
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-    .form-row {
-      display: grid;
-      grid-template-columns: 90px 1fr;
-      align-items: center;
-      column-gap: 8px;
-    }
+  .divider {
+    height: 2px;
+    background: #e53935;
+    margin: 6px 0;
+    width: 100%;
+  }
 
-    .form-row label {
-      font-size: 12.5px;
-      font-weight: 600;
-      white-space: nowrap;
-    }
+  .form-row {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    align-items: center;
+    column-gap: 8px;
+  }
 
-    .form-row select {
-      width: 100%;
-      padding: 6px;
-      font-size: 12px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-    }
+  .form-row label {
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
 
-    /* SAĞ PANEL */
-    .right-panel {
-      flex: 1;
-      background: #e9edf2;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #777;
-      font-size: 16px;
-      cursor: pointer;
-    }
-  </style>
+  .form-row select {
+    width: 100%;
+    padding: 6px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
+
+  /* SAĞ PANEL */
+  .right-panel {
+    flex: 1;
+    background: #e9edf2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #777;
+    font-size: 16px;
+    cursor: pointer;
+  }
+</style>
+
 </head>
 
 <body>
@@ -251,3 +261,4 @@ loadSelect("extra", "extraSelect");
 
 </body>
 </html>
+
