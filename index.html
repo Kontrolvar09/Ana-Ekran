@@ -12,7 +12,6 @@
     background: #f2f4f7;
   }
 
-  /* ANA YAPI */
   .app-container {
     display: flex;
     height: 100vh;
@@ -20,7 +19,6 @@
     overflow: hidden;
   }
 
-  /* SOL PANEL */
   .left-panel {
     width: 340px;
     background: #ffffff;
@@ -37,7 +35,6 @@
     display: none;
   }
 
-  /* TOGGLE BUTON */
   .toggle-btn {
     position: fixed;
     top: 10px;
@@ -52,7 +49,6 @@
     display: none;
   }
 
-  /* TEKLİF BİLGİLERİ */
   .info-text {
     font-size: 12px;
     color: #222;
@@ -71,7 +67,6 @@
     grid-template-columns: 1fr;
   }
 
-  /* 🔧 ASIL DÜZELTİLEN KISIM */
   .info-item {
     display: flex;
     align-items: center;
@@ -80,14 +75,14 @@
   }
 
   .info-item strong {
-    width: 75px;          /* label hizası */
+    width: 75px;
     flex-shrink: 0;
     font-weight: 600;
     white-space: nowrap;
   }
 
   .info-item span {
-    white-space: nowrap;  /* alt satıra düşmesin */
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -120,7 +115,27 @@
     border: 1px solid #ccc;
   }
 
-  /* SAĞ PANEL */
+  /* ✅ EK: Ekstra alanı yan yana yapmak için */
+  .extra-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 14px;
+    font-size: 13px;
+  }
+
+  .extra-grid label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .kol-adet-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 18px;
+  }
+
   .right-panel {
     flex: 1;
     background: #e9edf2;
@@ -131,20 +146,63 @@
     font-size: 16px;
     cursor: pointer;
   }
-</style>
 
+/* ✅ EK: Balkon tipi alanı */
+.balkon-type-area {
+  margin-top: 8px;
+}
+
+.balkon-type-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  text-align: center;   /* ✅ ORTALAMA */
+}
+
+.balkon-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.balkon-card {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 6px;
+  text-align: center;
+  cursor: pointer;
+  background: #fff;
+  font-size: 12px;
+}
+
+.balkon-card:hover {
+  border-color: #1976d2;
+}
+
+.balkon-card.active {
+  border-color: #1976d2;
+  background: #e3f2fd;
+}
+
+.balkon-card img {
+  width: 100%;
+  height: 42px;
+  object-fit: contain;
+  margin-top: 4px;
+}
+
+</style>
 </head>
 
 <body>
 
-<!-- TOGGLE -->
 <div class="toggle-btn" id="toggleBtn">☰</div>
 
 <div class="app-container" id="appContainer">
 
-  <!-- SOL PANEL -->
   <div class="left-panel" id="leftPanel">
 
+    <!-- ÜST BİLGİLER (AYNEN) -->
     <div class="info-text">
       <div class="info-row">
         <div class="info-item"><strong>Teklif No</strong><span id="teklifNo">-</span></div>
@@ -166,19 +224,91 @@
     <div class="form-row"><label>Sistem</label><select id="sistemSelect"></select></div>
     <div class="form-row"><label>Alüminyum</label><select id="aluminyumSelect"></select></div>
     <div class="form-row"><label>Cam</label><select id="camSelect"></select></div>
-    <div class="form-row"><label>Ekstra</label><select id="extraSelect"></select></div>
+
+    <!-- 🔴 ESKİ extraSelect SİLİNMEDİ -->
+    <div class="form-row" style="display:none;">
+      <label>Ekstra</label>
+      <select id="extraSelect"></select>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ✅ EKSTRA – YAN YANA -->
+    <div class="extra-grid">
+
+      <label><input type="checkbox" id="chkDamlalik"> Damlalık profili</label>
+      <label><input type="checkbox" id="chkPerdelik"> Perdelik profili</label>
+
+      <label><input type="checkbox" id="chkBaca"> Baca</label>
+      <label><input type="checkbox" id="chkMenfez"> Menfez</label>
+
+      <label><input type="checkbox" id="chkKol"> Kol</label>
+
+      <div class="kol-adet-row" id="kolAdetWrapper" style="display:none;">
+        Kol Adet
+        <input
+          type="number"
+          id="kolAdet"
+          min="0.5"
+          step="0.5"
+          value="1"
+          style="width:50px;">
+      </div>
+
+    </div> <!-- ✅ extra-grid DOĞRU YERDE KAPANDI -->
+
+    <!-- ✅ BALKON TİPİ (GRID DIŞINDA) -->
+    <div class="divider"></div>
+
+    <div class="balkon-type-area">
+      <div class="balkon-type-title">Balkon Tipi</div>
+
+      <div class="balkon-grid">
+
+        <div class="balkon-card" data-type="duz">
+          Düz Balkon
+          <img src="img/duz.png">
+        </div>
+
+        <div class="balkon-card" data-type="u">
+          U Balkon
+          <img src="img/u.png">
+        </div>
+
+        <div class="balkon-card" data-type="l">
+          L Balkon
+          <img src="img/l.png">
+        </div>
+
+        <div class="balkon-card" data-type="l2">
+          L Balkon
+          <img src="img/l2.png">
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Sheet için -->
+    <input type="hidden" id="balkon_tipi" value="">
+
+    <!-- ✅ EK: TRUE / FALSE Sheet için (AYNEN) -->
+    <input type="hidden" id="extra_damlalik" value="FALSE">
+    <input type="hidden" id="extra_perdelik" value="FALSE">
+    <input type="hidden" id="extra_baca" value="FALSE">
+    <input type="hidden" id="extra_menfez" value="FALSE">
+    <input type="hidden" id="extra_kol" value="FALSE">
 
   </div>
 
-  <!-- SAĞ PANEL -->
   <div class="right-panel" id="rightPanel">
     Buraya çizim ekranı / başka index gelecek
   </div>
 
 </div>
 
+
 <script>
-/* PANEL AÇ / KAPA */
+/* PANEL AÇ / KAPA (AYNEN) */
 const leftPanel = document.getElementById("leftPanel");
 const rightPanel = document.getElementById("rightPanel");
 const toggleBtn = document.getElementById("toggleBtn");
@@ -187,32 +317,51 @@ function updateToggle() {
   toggleBtn.style.display = leftPanel.classList.contains("hidden") ? "block" : "none";
 }
 
-// Sol panel içi tıklamalar kapanmayı tetiklemesin
-leftPanel.addEventListener("click", (e) => {
-  e.stopPropagation();
-});
+leftPanel.addEventListener("click", e => e.stopPropagation());
 
-// Toggle ile aç
-toggleBtn.addEventListener("click", (e) => {
+toggleBtn.addEventListener("click", e => {
   e.stopPropagation();
   leftPanel.classList.remove("hidden");
   updateToggle();
 });
 
-// SADECE sağ panele tıklanınca kapa
 rightPanel.addEventListener("click", () => {
-  if (!leftPanel.classList.contains("hidden")) {
-    leftPanel.classList.add("hidden");
-    updateToggle();
-  }
+  leftPanel.classList.add("hidden");
+  updateToggle();
 });
 
 updateToggle();
-
 </script>
 
 <script>
-/* API */
+/* ✅ EK: TRUE / FALSE BAĞLAMA */
+const extraMap = [
+  ["chkDamlalik", "extra_damlalik"],
+  ["chkPerdelik", "extra_perdelik"],
+  ["chkBaca", "extra_baca"],
+  ["chkMenfez", "extra_menfez"],
+  ["chkKol", "extra_kol"]
+];
+
+extraMap.forEach(([chkId, hiddenId]) => {
+  const chk = document.getElementById(chkId);
+  const hidden = document.getElementById(hiddenId);
+  chk.addEventListener("change", () => {
+    hidden.value = chk.checked ? "TRUE" : "FALSE";
+  });
+});
+
+/* KOL ADET */
+const chkKol = document.getElementById("chkKol");
+const kolAdetWrapper = document.getElementById("kolAdetWrapper");
+
+chkKol.addEventListener("change", () => {
+  kolAdetWrapper.style.display = chkKol.checked ? "flex" : "none";
+});
+</script>
+
+<script>
+/* API (AYNEN) */
 const API_URL =
 "https://script.google.com/macros/s/AKfycby7dpkJcXM46i-Hv1sQUyKwH4r_LL4aSTXQEr1pKaHAhWKB_7VFCYchtbIg8vpdeyYcMg/exec";
 
@@ -222,12 +371,11 @@ function getQueryParam(name) {
 
 const teklifNo = (getQueryParam("teklifNo") || "").trim();
 
-/* DOM */
 const teklifNoEl = document.getElementById("teklifNo");
-const tarihEl    = document.getElementById("tarih");
-const musteriEl  = document.getElementById("musteri");
-const telefonEl  = document.getElementById("telefon");
-const montajEl   = document.getElementById("montaj");
+const tarihEl = document.getElementById("tarih");
+const musteriEl = document.getElementById("musteri");
+const telefonEl = document.getElementById("telefon");
+const montajEl = document.getElementById("montaj");
 
 async function fetchJSON(url) {
   const res = await fetch(url);
@@ -241,16 +389,13 @@ async function loadTeklif() {
     API_URL + "?action=teklif&teklifNo=" + encodeURIComponent(teklifNo)
   );
 
-  if (data.error) {
-    console.warn(data.error);
-    return;
-  }
+  if (data.error) return;
 
   teklifNoEl.textContent = data.teklifNo || "-";
-  tarihEl.textContent    = data.tarih || "-";
-  musteriEl.textContent  = data.musteriAdi || "-";
-  telefonEl.textContent  = data.telefon || "-";
-  montajEl.textContent   = data.montajYeri || "-";
+  tarihEl.textContent = data.tarih || "-";
+  musteriEl.textContent = data.musteriAdi || "-";
+  telefonEl.textContent = data.telefon || "-";
+  montajEl.textContent = data.montajYeri || "-";
 }
 
 async function loadSelect(action, id) {
@@ -264,10 +409,24 @@ loadTeklif();
 loadSelect("sistemler", "sistemSelect");
 loadSelect("aluminyum", "aluminyumSelect");
 loadSelect("cam", "camSelect");
-loadSelect("extra", "extraSelect");
 </script>
+
+<script>
+/* ✅ EK: Balkon tipi seçimi */
+const balkonCards = document.querySelectorAll(".balkon-card");
+const balkonTipiInput = document.getElementById("balkon_tipi");
+
+balkonCards.forEach(card => {
+  card.addEventListener("click", () => {
+
+    balkonCards.forEach(c => c.classList.remove("active"));
+    card.classList.add("active");
+
+    balkonTipiInput.value = card.dataset.type;
+  });
+});
+</script>
+
 
 </body>
 </html>
-
-
