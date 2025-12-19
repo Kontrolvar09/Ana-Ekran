@@ -5,7 +5,13 @@
   <title>Çizim Ekranı</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+
+  
   <style>
+html, body {
+  overscroll-behavior-y: contain;
+  touch-action: pan-x pan-y;
+}   
   body {
     margin: 0;
     font-family: Arial, sans-serif;
@@ -145,6 +151,7 @@
     color: #777;
     font-size: 16px;
     cursor: pointer;
+    overscroll-behavior: contain;
   }
 
 /* ✅ EK: Balkon tipi alanı */
@@ -479,10 +486,31 @@ drawingFrame.addEventListener("load", () => {
   }
 });
 </script>
-  
+
+  <script>
+/* 🚨 SAYFA YENİLENİRSE UYARI */
+
+let hasDrawing = false;
+
+/* Çizim ekranı açıldığında */
+drawingFrame.addEventListener("load", () => {
+  hasDrawing = true;
+});
+
+/* Sayfa kapanma / yenilenme yakalama */
+window.addEventListener("beforeunload", function (e) {
+  if (hasDrawing) {
+    e.preventDefault();
+    e.returnValue = "Çizim iptal edilecek. Sayfayı yenilemek istediğinize emin misiniz?";
+    return e.returnValue;
+  }
+});
+</script>
+
 
 </body>
 </html>
+
 
 
 
