@@ -300,9 +300,19 @@
 
   </div>
 
-  <div class="right-panel" id="rightPanel">
-    Buraya çizim ekranı / başka index gelecek
-  </div>
+<div class="right-panel" id="rightPanel">
+  <iframe
+    id="drawingFrame"
+    src=""
+    style="
+      width:100%;
+      height:100%;
+      border:none;
+      background:#fff;
+    ">
+  </iframe>
+</div>
+
 
 </div>
 
@@ -412,17 +422,36 @@ loadSelect("cam", "camSelect");
 </script>
 
 <script>
-/* ✅ EK: Balkon tipi seçimi */
+<script>
+/* ✅ Balkon tipi seçimi + çizim ekranı açma */
 const balkonCards = document.querySelectorAll(".balkon-card");
 const balkonTipiInput = document.getElementById("balkon_tipi");
+const drawingFrame = document.getElementById("drawingFrame");
 
 balkonCards.forEach(card => {
   card.addEventListener("click", () => {
 
+    // aktif görünüm
     balkonCards.forEach(c => c.classList.remove("active"));
     card.classList.add("active");
 
-    balkonTipiInput.value = card.dataset.type;
+    const type = card.dataset.type;
+    balkonTipiInput.value = type;
+
+    // 👉 ÇİZİM EKRANI YÜKLEME
+    if (type === "duz") {
+      drawingFrame.src = "duz.index.html";
+    }
+    else if (type === "u") {
+      drawingFrame.src = "u.index.html";
+    }
+    else if (type === "l") {
+      drawingFrame.src = "l.index.html";
+    }
+    else if (type === "l2") {
+      drawingFrame.src = "l2.index.html";
+    }
+
   });
 });
 </script>
@@ -430,3 +459,4 @@ balkonCards.forEach(card => {
 
 </body>
 </html>
+
