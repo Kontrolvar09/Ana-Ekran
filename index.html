@@ -181,80 +181,65 @@
 </div>
 
 <script>
-  /* 🔹 SADECE PANEL MANTIĞI EKLENDİ */
-  const leftPanel = document.getElementById("leftPanel");
-  const toggleBtn = document.getElementById("toggleBtn");
-  const appContainer = document.getElementById("appContainer");
-
-  function updateToggle() {
-    toggleBtn.style.display = leftPanel.classList.contains("hidden") ? "block" : "none";
-  }
-
-toggleBtn.addEventListener("click", (e) => {
-  e.stopPropagation();
-  leftPanel.classList.remove("hidden");
-  updateToggle();
-});
-
-  leftPanel.addEventListener("click", (e) => {
-    e.stopPropagation(); // sol panel içi tıklamalar kapatmasın
-  });
-
-appContainer.addEventListener("click", () => {
-  if (!leftPanel.classList.contains("hidden")) {
-    leftPanel.classList.add("hidden");
-    updateToggle();
-  }
-});
-
-
-  updateToggle(); // ilk durum
-</script>
-
-<!-- 🔹 ORİJİNAL SCRIPTİN AYNEN DURUYOR -->
-<script>
 const API_URL =
 "https://script.google.com/macros/s/AKfycby7dpkJcXM46i-Hv1sQUyKwH4r_LL4aSTXQEr1pKaHAhWKB_7VFCYchtbIg8vpdeyYcMg/exec";
 
+function getQueryParam(name) {
+  return new URLSearchParams(window.location.search).get(name);
+}
 
-  function getQueryParam(name) {
-    return new URLSearchParams(window.location.search).get(name);
+const teklifNo = (getQueryParam("teklifNo") || "").trim();
+
+/* 🔹 DOM REFERANSLARI (EKSİK OLAN KISIM) */
+const teklifNoEl = document.getElementById("teklifNo");
+const tarihEl    = document.getElementById("tarih");
+const musteriEl  = document.getElementById("musteri");
+const telefonEl  = document.getElementById("telefon");
+const montajEl   = document.getElementById("montaj");
+
+async function fetchJSON(url) {
+  const res = await fetch(url, { redirect: "follow" });
+  const text = await res.text();
+  return JSON.parse(text);
+}
+
+async function loadTeklif() {
+  if (!teklifNo) return;
+
+  const data = await fetchJSON(
+    API_URL + "?action=teklif&teklifNo=" + encodeURIComponent(teklifNo)
+  );
+
+  if (data.error) {
+    console.warn("Teklif yüklenemedi:", data.error);
+    return;
   }
 
-  const teklifNo = (getQueryParam("teklifNo") || "").trim();
+  teklifNoEl.textContent = data.teklifNo || "-";
+  tarihEl.textContent    = data.tarih || "-";
+  musteriEl.textContent  = data.musteriAdi || "-";
+  telefonEl.textContent  = data.telefon || "-";
+  montajEl.textContent   = data.montajYeri || "-";
+}
 
-  async function fetchJSON(url) {
-    const res = await fetch(url, { redirect: "follow" });
-    const text = await res.text();
-    return JSON.parse(text);
-  }
+async function loadSelect(action, selectId) {
+  const list = await fetchJSON(API_URL + "?action=" + action);
+  const select = document.getElementById(selectId);
+  select.innerHTML = '<option value="">Seçiniz</option>';
+  list.forEach(item => select.add(new Option(item, item)));
+}
 
-  async function loadTeklif() {
-    if (!teklifNo) return;
-    const data = await fetchJSON(API_URL + "?action=teklif&teklifNo=" + encodeURIComponent(teklifNo));
-    if (data.error) return;
-    teklifNoEl.textContent = data.teklifNo || "-";
-    tarih.textContent = data.tarih || "-";
-    musteri.textContent = data.musteriAdi || "-";
-    telefon.textContent = data.telefon || "-";
-    montaj.textContent = data.montajYeri || "-";
-  }
-
-  async function loadSelect(action, selectId) {
-    const list = await fetchJSON(API_URL + "?action=" + action);
-    const select = document.getElementById(selectId);
-    select.innerHTML = '<option value="">Seçiniz</option>';
-    list.forEach(item => select.add(new Option(item, item)));
-  }
-
-  loadTeklif();
-  loadSelect("sistemler", "sistemSelect");
-  loadSelect("aluminyum", "aluminyumSelect");
-  loadSelect("cam", "camSelect");
-  loadSelect("extra", "extraSelect");
+/* 🔹 ÇALIŞTIR */
+loadTeklif();
+loadSelect("sistemler", "sistemSelect");
+loadSelect("aluminyum", "aluminyumSelect");
+loadSelect("cam", "camSelect");
+loadSelect("extra", "extraSelect");
 </script>
+
 
 </body>
 </html>
+
 
 
