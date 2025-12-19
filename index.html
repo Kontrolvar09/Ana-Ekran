@@ -447,10 +447,17 @@ balkonCards.forEach(card => {
     } else if (type === "l2") {
       drawingFrame.src = "l2.index.html";
     }
+
+    // ✅ SOL PANELİ GİZLE (EKSİK OLAN KISIM)
+    leftPanel.classList.add("hidden");
+    updateToggle();
+
   });
 });
 </script>
 
 
+
 </body>
 </html>
+
