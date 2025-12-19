@@ -421,7 +421,6 @@ loadSelect("aluminyum", "aluminyumSelect");
 loadSelect("cam", "camSelect");
 </script>
 
-DOĞRUSU (tek script olacak)
 <script>
 /* ✅ Balkon tipi seçimi + çizim ekranı açma */
 const balkonCards = document.querySelectorAll(".balkon-card");
@@ -431,12 +430,14 @@ const drawingFrame = document.getElementById("drawingFrame");
 balkonCards.forEach(card => {
   card.addEventListener("click", () => {
 
+    // aktif görünüm
     balkonCards.forEach(c => c.classList.remove("active"));
     card.classList.add("active");
 
     const type = card.dataset.type;
     balkonTipiInput.value = type;
 
+    // 👉 ÇİZİM EKRANI YÜKLEME
     if (type === "duz") {
       drawingFrame.src = "duz.index.html";
     } else if (type === "u") {
@@ -449,7 +450,7 @@ balkonCards.forEach(card => {
   });
 });
 </script>
+
+
 </body>
 </html>
-
-
